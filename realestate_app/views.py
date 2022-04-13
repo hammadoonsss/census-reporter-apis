@@ -13,12 +13,18 @@ from realestate_app.server_file import sftpExamp
 
 
 base_url = "https://api.censusreporter.org"
-print(os.getcwd())
+base_path = os.getcwd()
+
+# print(os.getcwd())
 
 
 def ftp_connect():
+    """
+        Function for making Connection to FTP Server
+    """
     try:
-        print("_________________", FTP_HOST, FTP_USER, FTP_PASS)
+        # print("___--___", FTP_HOST, FTP_USER, FTP_PASS)
+
         # Connect to FTP Server
         ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
         print('ftp:--- ', ftp)
@@ -32,14 +38,17 @@ def ftp_connect():
 
 
 def upload_file():
+    """
+        Function to Upload JSON file on the FTP Server
+    """
 
     try:
         ftp = ftp_connect()
-        filename = f"{os.getcwd()}/realestate_app/racedata.json"
+        filename = f"{base_path}/static/upload/racedata.json"
         print('filename: -----------------', filename)
         ftp.set_pasv(False)
 
-        with open(filename, "rb")as file:
+        with open(filename, "rb") as file:
             # data = file.read()
             # print('data: ', data)
             ftp.storbinary("STOR Housing_App_Unit/racestatedata01.json", file)
@@ -48,22 +57,47 @@ def upload_file():
         print("Error in UPF:", e)
 
 
+def get_server_file():
+    """
+        Funtion to get JSON file from the FTP Server
+    """
+
+    try:
+        ftp = ftp_connect()
+
+        filename = f"{base_path}/static/download/racedata.json"
+        ftp.set_pasv(False)
+
+        with open(filename, 'wb') as file:
+            ftp.retrbinary(
+                "RETR Housing_App_Unit/racestatedata01.json", file.write)
+
+    except Exception as e:
+        print("Error in GTF: ", e)
+
+
 def convert_list_string(code_list):
+    """
+        Function to Convert code list into String format 
+    """
 
     try:
 
         if len(code_list) and type(code_list) == list:
             code_string = (',').join(code_list)
-            print('code_string:------- ', code_string)
+            print('code_string:------- ', code_string, type(code_string))
             return code_string
         else:
-            print("In else+++++++++")
+            print("In CLS else ")
             return None
     except Exception as e:
         print("Error in CLS")
 
 
 def get_state_dict(state):
+    """
+        Function to get US State Code based on their abbreviation dictionary 
+    """
 
     state_code = {
         "FL": "050|04000US12",
@@ -75,7 +109,7 @@ def get_state_dict(state):
 
     state_list = []
     try:
-        print("------0-00", state)
+        print("--state--0-", state)
 
         for i in state:
             if i in state_code:
@@ -87,6 +121,24 @@ def get_state_dict(state):
         print("Error as in GSD")
 
 
+def write_json_file(data):
+    """
+        Function to Write JSON File 
+    """
+
+    try:
+        file_path = f"{base_path}/static/upload/racedata.json"
+        print('file_path: ', file_path)
+
+        with open(file_path, "w") as f:
+            f.write(data)
+
+            f.close()
+
+    except Exception as e:
+        print("Error in WJF", e)
+
+
 def make_request(method, endpoint, data):
     """
         Function to make request to base_url with specific endpoints a/c to the method given
@@ -94,9 +146,9 @@ def make_request(method, endpoint, data):
 
     if method == "GET":
         try:
-            print("_______________", base_url + endpoint,)
+            print("____", base_url + endpoint,)
             response = requests.get(base_url + endpoint, params=data)
-            print("---------------")
+            print("----")
         except Exception as e:
             print("Error in make Request GET")
 
@@ -109,17 +161,19 @@ def make_request(method, endpoint, data):
         print("Error while making get request")
 
 
-def write_json_file(data):
+def read_json_file():
 
     try:
-        file_path = f"{os.getcwd()}/realestate_app/racedata.json"
-        with open(file_path, "w") as f:
-            f.write(data)
+        file_path = f"{base_path}/static/download/racedata.json"
+        print('file_path: --', file_path)
 
+        with open(file_path, "r") as f:
+            data = f.read()
+            print('data: ', data)
             f.close()
 
     except Exception as e:
-        print("Error in WJF", e)
+        print("Error in RJF: ", e)
 
 
 class AmericanCommunitySurveyData(APIView):
@@ -225,12 +279,22 @@ class RaceStateData(APIView):
             # sftpExamp()
             try:
                 upload_file()
+
                 ftp = ftp_connect()
                 ftp.set_pasv(False)
                 ftp.dir("Housing_App_Unit/")
-                ftp.quit()
+
             except Exception as e:
-                print("Error in ftp inside:::", e)
+                print("Error in ftp_upload inside:::", e)
+
+            try:
+                print("---before getting a file")
+                get_server_file()
+                print("---after getting a file")
+            except Exception as e:
+                print("Error in ftp_get inside::", e)
+
+                ftp.quit()
 
             return Response(race_data)
 
@@ -268,3 +332,12 @@ class RaceMultipleStateData(APIView):
 
         except Exception as e:
             return Response({"Error in RMSD":  f"{e}"})
+
+
+class ReadRaceData(APIView):
+
+    def get(self, request):
+        try:
+            read_json_file()
+        except Exception as e:
+            print("Error in RRD: ", e)
