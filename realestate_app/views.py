@@ -1,15 +1,18 @@
+import os
 import json
+import time
 import ftplib
 import requests
-import time
-import os
+
+from django.http import JsonResponse
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from realestate_bot.settings import FTP_HOST, FTP_PASS, FTP_USER
+from realestate_app.models import Race
+from realestate_app.serializers import RaceSerializer
 
-from realestate_app.server_file import sftpExamp
+from realestate_bot.settings import FTP_HOST, FTP_PASS, FTP_USER
 
 
 base_url = "https://api.censusreporter.org"
@@ -78,7 +81,7 @@ def get_server_file():
 
 def convert_list_string(code_list):
     """
-        Function to Convert code list into String format 
+        Function to Convert code list into String format
     """
 
     try:
@@ -96,7 +99,7 @@ def convert_list_string(code_list):
 
 def get_state_dict(state):
     """
-        Function to get US State Code based on their abbreviation dictionary 
+        Function to get US State Code based on their abbreviation dictionary
     """
 
     state_code = {
@@ -123,7 +126,7 @@ def get_state_dict(state):
 
 def write_json_file(data):
     """
-        Function to Write JSON File 
+        Function to Write JSON File
     """
 
     try:
@@ -169,11 +172,41 @@ def read_json_file():
 
         with open(file_path, "r") as f:
             data = f.read()
-            print('data: ', data)
+            print('data: ', type(data))
             f.close()
+        return data
 
     except Exception as e:
         print("Error in RJF: ", e)
+
+
+def get_and_create_race_data(data_dict):
+    """
+        Function to get race code data from dictionary and populate Race table 
+    """
+
+    try:
+        print("-----------", type(data_dict))
+        data_value = data_dict['tables'].get('B02001').get('columns')
+        print('values: ', data_value)
+
+        new_race_dict = {}
+
+        for i in data_value:
+            subrace_id = i
+            subrace_name = data_value.get(i).get("name")
+
+            try:
+                race_data = Race.objects.get(race_id=subrace_id)
+                print('race_data: in get', race_data)
+            except:
+
+                racedb_data = Race.objects.create(
+                    race_id=subrace_id, race_name=subrace_name)
+                print('racedb_data: in create', racedb_data)
+
+    except Exception as e:
+        print("Error in GRD:", e)
 
 
 class AmericanCommunitySurveyData(APIView):
@@ -247,6 +280,38 @@ class AllCountiesData(APIView):
             print("Error in ACD: ", e)
 
 
+class RaceMultipleStateData(APIView):
+
+    def post(self, request):
+
+        try:
+            data = dict()
+            # data['latest'] = 'latest'
+            print('request.data: ', request.data)
+
+            symbol_list = request.data.get('Symbol')
+            multi_symbol = convert_list_string(symbol_list)
+            data['table_ids'] = multi_symbol
+
+            state_list = request.data.get('State')
+            state_code_list = get_state_dict(state_list)
+            multi_state = convert_list_string(state_code_list)
+            data['geo_ids'] = multi_state
+
+            data_value = make_request("GET", "/1.0/data/show/latest", data)
+            print("data_value: -----------", data_value)
+
+            # response = requests.get(
+            #     f"{base_url}/data/show/latest?table_ids={multi_symbol}&geo_ids={multi_state}")
+
+            # race_data = response.json()
+
+            return Response(data_value)
+
+        except Exception as e:
+            return Response({"Error in RMSD":  f"{e}"})
+
+
 class RaceStateData(APIView):
 
     def post(self, request):
@@ -302,42 +367,34 @@ class RaceStateData(APIView):
             return Response({"Error in RSSD":  f"{e}"})
 
 
-class RaceMultipleStateData(APIView):
+class RaceCodeData(APIView):
+
+    def get(self, request):
+
+        try:
+            race_data = Race.objects.all()
+            if race_data.exists():
+                print("Inside if --")
+                race_serializer = RaceSerializer(race_data, many=True)
+                return Response(race_serializer.data)
+            else:
+                print("inside else --")
+                return Response("No Data Available")
+
+        except Exception as e:
+            print("Error in RRD-GET", e)
 
     def post(self, request):
 
         try:
-            data = dict()
-            # data['latest'] = 'latest'
-            print('request.data: ', request.data)
+            data = read_json_file()
+            print('data: ', type(data))
+            data_dict = json.loads(data)
+            print('data_dict: ', type(data_dict))
 
-            symbol_list = request.data.get('Symbol')
-            multi_symbol = convert_list_string(symbol_list)
-            data['table_ids'] = multi_symbol
+            get_and_create_race_data(data_dict)
 
-            state_list = request.data.get('State')
-            state_code_list = get_state_dict(state_list)
-            multi_state = convert_list_string(state_code_list)
-            data['geo_ids'] = multi_state
-
-            data_value = make_request("GET", "/1.0/data/show/latest", data)
-            print("data_value: -----------", data_value)
-
-            # response = requests.get(
-            #     f"{base_url}/data/show/latest?table_ids={multi_symbol}&geo_ids={multi_state}")
-
-            # race_data = response.json()
-
-            return Response(data_value)
+            return Response(data_dict)
 
         except Exception as e:
-            return Response({"Error in RMSD":  f"{e}"})
-
-
-class ReadRaceData(APIView):
-
-    def get(self, request):
-        try:
-            read_json_file()
-        except Exception as e:
-            print("Error in RRD: ", e)
+            print("Error in RRD-POST: ", e)

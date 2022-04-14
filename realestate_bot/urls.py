@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path
 
 from realestate_app.views import(AllCountiesData, AllStatesData, AmericanCommunitySurveyData, TabulationData,
-                                 RaceMultipleStateData, RaceStateData, )
+                                 RaceMultipleStateData, RaceStateData, RaceCodeData)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -37,4 +37,7 @@ urlpatterns = [
 
     path("race_multiple_state/data/", RaceMultipleStateData.as_view(),
          name='race_single_state_data'),
+
+    path("race_code/data/", RaceCodeData.as_view(),
+         name='race_code_data'),
 ]
