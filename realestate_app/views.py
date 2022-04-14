@@ -9,16 +9,14 @@ from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from realestate_app.models import Race
-from realestate_app.serializers import RaceSerializer
+from realestate_app.models import County, Race, State
+from realestate_app.serializers import CountySerializer, RaceSerializer, StateSerializer
 
 from realestate_bot.settings import FTP_HOST, FTP_PASS, FTP_USER
 
 
 base_url = "https://api.censusreporter.org"
 base_path = os.getcwd()
-
-# print(os.getcwd())
 
 
 def ftp_connect():
@@ -47,8 +45,8 @@ def upload_file():
 
     try:
         ftp = ftp_connect()
+
         filename = f"{base_path}/static/upload/racedata.json"
-        print('filename: -----------------', filename)
         ftp.set_pasv(False)
 
         with open(filename, "rb") as file:
@@ -81,17 +79,17 @@ def get_server_file():
 
 def convert_list_string(code_list):
     """
-        Function to Convert code list into String format
+        Function to Convert code_list into String format
     """
 
     try:
 
         if len(code_list) and type(code_list) == list:
             code_string = (',').join(code_list)
-            print('code_string:------- ', code_string, type(code_string))
+            # print('code_string:------- ', code_string, type(code_string))
             return code_string
         else:
-            print("In CLS else ")
+            print("In CLS else")
             return None
     except Exception as e:
         print("Error in CLS")
@@ -131,7 +129,6 @@ def write_json_file(data):
 
     try:
         file_path = f"{base_path}/static/upload/racedata.json"
-        print('file_path: ', file_path)
 
         with open(file_path, "w") as f:
             f.write(data)
@@ -149,9 +146,8 @@ def make_request(method, endpoint, data):
 
     if method == "GET":
         try:
-            print("____", base_url + endpoint,)
+            # print("____", base_url + endpoint,)
             response = requests.get(base_url + endpoint, params=data)
-            print("----")
         except Exception as e:
             print("Error in make Request GET")
 
@@ -168,13 +164,16 @@ def read_json_file():
 
     try:
         file_path = f"{base_path}/static/download/racedata.json"
-        print('file_path: --', file_path)
 
         with open(file_path, "r") as f:
             data = f.read()
-            print('data: ', type(data))
+            print('data in RJF:', type(data))
             f.close()
-        return data
+
+        data_dict = json.loads(data)
+        print('data_dict in RJF:', type(data_dict))
+
+        return data_dict
 
     except Exception as e:
         print("Error in RJF: ", e)
@@ -182,31 +181,94 @@ def read_json_file():
 
 def get_and_create_race_data(data_dict):
     """
-        Function to get race code data from dictionary and populate Race table 
+        Function to get Race Code Data from dictionary
+        and populate Race Table 
     """
 
     try:
-        print("-----------", type(data_dict))
+        print("try in GCRD: ", type(data_dict))
         data_value = data_dict['tables'].get('B02001').get('columns')
         print('values: ', data_value)
 
-        new_race_dict = {}
-
         for i in data_value:
-            subrace_id = i
-            subrace_name = data_value.get(i).get("name")
+            race_id = i
+            race_name = data_value.get(i).get("name")
 
             try:
-                race_data = Race.objects.get(race_id=subrace_id)
-                print('race_data: in get', race_data)
+                race_data = Race.objects.get(race_id=race_id)
+                print('GCRD-race_data: try get: \n', race_data)
             except:
-
                 racedb_data = Race.objects.create(
-                    race_id=subrace_id, race_name=subrace_name)
-                print('racedb_data: in create', racedb_data)
+                    race_id=race_id, 
+                    race_name=race_name
+                    )
+                print('GCRD-racedb_data: except create \n', racedb_data)
 
     except Exception as e:
         print("Error in GRD:", e)
+
+
+def get_and_create_state_county_data(data_dict):
+    """
+        Function to get State/County Data from dictionary 
+        and populate State/County Table 
+    """
+
+    try:
+        print("try in GCCD: ", type(data_dict))
+        data_value = data_dict['geography']
+        # print('data_value: ', data_value)
+
+        for i in data_value:
+
+            code_initial = i
+            code_name = data_value.get(code_initial).get("name")
+
+            # Checking and Insert State's Detail
+            if code_initial[0:5] == '04000':
+                print("Getting State", code_initial[5:9])
+
+                state_id = code_initial[5:9]
+                state_name = code_name
+                state_ref_id = code_initial
+
+                try:
+                    state_data = State.objects.get(state_id=state_id)
+                    print('GCCD-state_data: try get \n', state_data)
+                except:
+                    statedb_data = State.objects.create(
+                        state_id=state_id,
+                        state_name=state_name,
+                        state_ref_id=state_ref_id
+                    )
+                    print('GCCD-statedb_data: except create', statedb_data)
+
+            # Checking and Insert State's Detail
+            elif code_initial[0:5] == '05000':
+
+                county_id = code_initial
+                county_name = code_name.split(',')[0]
+                state_id = code_initial[5:9]
+
+                state_data = State.objects.get(state_id=state_id)
+
+                try:
+
+                    county_data = County.objects.get(county_id=county_id)
+                    print('GCCD-county_data: try get \n', county_data)
+                except:
+                    county_data = County.objects.create(
+                        county_id=county_id,
+                        county_name=county_name,
+                        state=state_data
+                    )
+                    print('GCCD-county_data: except create \n', county_data)
+
+            else:
+                print("Not Relevent ")
+
+    except Exception as e:
+        print("Error in GCCD: ", e)
 
 
 class AmericanCommunitySurveyData(APIView):
@@ -217,7 +279,7 @@ class AmericanCommunitySurveyData(APIView):
             response = requests.get(
                 f"{base_url}/data/show/acs2020_5yr?table_ids=B01001,B01002&geo_ids=16000US5367000")
             data_value = response.json()
-            print('data_value: \n', data_value)
+            # print('data_value: \n', data_value)
 
             return Response(data_value)
 
@@ -233,7 +295,7 @@ class TabulationData(APIView):
             response = requests.get(
                 f"{base_url}/tabulation/02001")
             tabulation_data = response.json()
-            print('tabulation_data: \n', tabulation_data)
+            # print('tabulation_data: \n', tabulation_data)
 
             return Response(tabulation_data)
 
@@ -272,7 +334,7 @@ class AllCountiesData(APIView):
                 "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B02001&geo_ids=050|04000US53")
 
             all_counties_data = response.json()
-            print('all_counties_data: \n', all_counties_data)
+            # print('all_counties_data: \n', all_counties_data)
 
             return Response(all_counties_data)
 
@@ -287,7 +349,7 @@ class RaceMultipleStateData(APIView):
         try:
             data = dict()
             # data['latest'] = 'latest'
-            print('request.data: ', request.data)
+            # print('request.data: ', request.data)
 
             symbol_list = request.data.get('Symbol')
             multi_symbol = convert_list_string(symbol_list)
@@ -299,7 +361,7 @@ class RaceMultipleStateData(APIView):
             data['geo_ids'] = multi_state
 
             data_value = make_request("GET", "/1.0/data/show/latest", data)
-            print("data_value: -----------", data_value)
+            # print("data_value: --++---", data_value)
 
             # response = requests.get(
             #     f"{base_url}/data/show/latest?table_ids={multi_symbol}&geo_ids={multi_state}")
@@ -353,9 +415,9 @@ class RaceStateData(APIView):
                 print("Error in ftp_upload inside:::", e)
 
             try:
-                print("---before getting a file")
+                # print("---before getting a file")
                 get_server_file()
-                print("---after getting a file")
+                # print("---after getting a file")
             except Exception as e:
                 print("Error in ftp_get inside::", e)
 
@@ -382,15 +444,13 @@ class RaceCodeData(APIView):
                 return Response("No Data Available")
 
         except Exception as e:
-            print("Error in RRD-GET", e)
+            print("Error in RRD-GET: ", e)
 
     def post(self, request):
 
         try:
-            data = read_json_file()
-            print('data: ', type(data))
-            data_dict = json.loads(data)
-            print('data_dict: ', type(data_dict))
+            data_dict = read_json_file()
+            # print('data_dict:======= ', data_dict)
 
             get_and_create_race_data(data_dict)
 
@@ -398,3 +458,48 @@ class RaceCodeData(APIView):
 
         except Exception as e:
             print("Error in RRD-POST: ", e)
+
+
+class CountyDetailData(APIView):
+
+    def get(self, request):
+
+        try:
+            state_data = State.objects.all()
+            county_data = County.objects.all()
+
+            new_dict={}
+
+            if state_data.exists() and county_data.exists():
+                print("Inside If --")
+                state_serializer = StateSerializer(state_data, many=True)
+                print('state_serializer: ', type(state_serializer))
+                county_serializer = CountySerializer(county_data, many=True)
+
+                new_dict['State'] = list(state_serializer.data)
+                new_dict['County'] = list(county_serializer.data)
+
+                state_county_data = json.dumps(new_dict)
+                print('state_county_data: ', type(state_county_data))
+
+                return Response(state_county_data)
+
+            else:
+                print("Inside else--")
+                return Response("No Data Available")
+
+        except Exception as e:
+            print("Error in CD-GET: ", e)
+
+    def post(self, request):
+
+        try:
+            data_dict = read_json_file()
+            print('data_dict in CD : ', type(data_dict))
+
+            get_and_create_state_county_data(data_dict)
+
+            return Response(data_dict)
+
+        except Exception as e:
+            print("Error in CD-POST: ", e)
