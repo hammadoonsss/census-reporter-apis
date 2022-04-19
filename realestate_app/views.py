@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from realestate_app.models import County, Race, State
+from realestate_app.models import County, Race, RaceError, RaceEstimate, State
 from realestate_app.serializers import CountySerializer, RaceSerializer, StateSerializer
 
 from realestate_bot.settings import FTP_HOST, FTP_PASS, FTP_USER
@@ -101,11 +101,59 @@ def get_state_dict(state):
     """
 
     state_code = {
+        "AL": "050|04000US01",
+        "AK": "050|04000US02",
+        "AZ": "050|04000US04",
+        "AR": "050|04000US05",
+        "CA": "050|04000US06",
+        "CO": "050|04000US08",
+        "CT": "050|04000US09",
+        "DE": "050|04000US10",
+        "DC": "050|04000US11",
         "FL": "050|04000US12",
+        "GA": "050|04000US13",
+        "HI": "050|04000US15",
+        "ID": "050|04000US16",
+        "IL": "050|04000US17",
+        "IN": "050|04000US18",
+        "IA": "050|04000US19",
+        "KS": "050|04000US20",
+        "KY": "050|04000US21",
+        "LA": "050|04000US22",
+        "ME": "050|04000US23",
+        "MD": "050|04000US24",
         "MA": "050|04000US25",
+        "MI": "050|04000US26",
+        "MN": "050|04000US27",
+        "MS": "050|04000US28",
+        "MO": "050|04000US29",
+        "MT": "050|04000US30",
+        "NE": "050|04000US31",
+        "NV": "050|04000US32",
+        "NH": "050|04000US33",
         "NJ": "050|04000US34",
+        "NM": "050|04000US35",
         "NY": "050|04000US36",
+        "NC": "050|04000US37",
+        "ND": "050|04000US38",
         "OH": "050|04000US39",
+        "OK": "050|04000US40",
+        "OR": "050|04000US41",
+        "PA": "050|04000US42",
+        "RI": "050|04000US44",
+        "SC": "050|04000US45",
+        "SD": "050|04000US46",
+        "TN": "050|04000US47",
+        "TX": "050|04000US48",
+        "UT": "050|04000US49",
+        "VT": "050|04000US50",
+        "VA": "050|04000US51",
+        "WA": "050|04000US53",
+        "WV": "050|04000US54",
+        "WI": "050|04000US55",
+        "WY": "050|04000US56",
+        "PR": "050|04000US72",
+        "VI": "050|04000US78",
     }
 
     state_list = []
@@ -177,98 +225,6 @@ def read_json_file():
 
     except Exception as e:
         print("Error in RJF: ", e)
-
-
-def get_and_create_race_data(data_dict):
-    """
-        Function to get Race Code Data from dictionary
-        and populate Race Table 
-    """
-
-    try:
-        print("try in GCRD: ", type(data_dict))
-        data_value = data_dict['tables'].get('B02001').get('columns')
-        print('values: ', data_value)
-
-        for i in data_value:
-            race_id = i
-            race_name = data_value.get(i).get("name")
-
-            try:
-                race_data = Race.objects.get(race_id=race_id)
-                print('GCRD-race_data: try get: \n', race_data)
-            except:
-                racedb_data = Race.objects.create(
-                    race_id=race_id, 
-                    race_name=race_name
-                    )
-                print('GCRD-racedb_data: except create \n', racedb_data)
-
-    except Exception as e:
-        print("Error in GRD:", e)
-
-
-def get_and_create_state_county_data(data_dict):
-    """
-        Function to get State/County Data from dictionary 
-        and populate State/County Table 
-    """
-
-    try:
-        print("try in GCCD: ", type(data_dict))
-        data_value = data_dict['geography']
-        # print('data_value: ', data_value)
-
-        for i in data_value:
-
-            code_initial = i
-            code_name = data_value.get(code_initial).get("name")
-
-            # Checking and Insert State's Detail
-            if code_initial[0:5] == '04000':
-                print("Getting State", code_initial[5:9])
-
-                state_id = code_initial[5:9]
-                state_name = code_name
-                state_ref_id = code_initial
-
-                try:
-                    state_data = State.objects.get(state_id=state_id)
-                    print('GCCD-state_data: try get \n', state_data)
-                except:
-                    statedb_data = State.objects.create(
-                        state_id=state_id,
-                        state_name=state_name,
-                        state_ref_id=state_ref_id
-                    )
-                    print('GCCD-statedb_data: except create', statedb_data)
-
-            # Checking and Insert State's Detail
-            elif code_initial[0:5] == '05000':
-
-                county_id = code_initial
-                county_name = code_name.split(',')[0]
-                state_id = code_initial[5:9]
-
-                state_data = State.objects.get(state_id=state_id)
-
-                try:
-
-                    county_data = County.objects.get(county_id=county_id)
-                    print('GCCD-county_data: try get \n', county_data)
-                except:
-                    county_data = County.objects.create(
-                        county_id=county_id,
-                        county_name=county_name,
-                        state=state_data
-                    )
-                    print('GCCD-county_data: except create \n', county_data)
-
-            else:
-                print("Not Relevent ")
-
-    except Exception as e:
-        print("Error in GCCD: ", e)
 
 
 class AmericanCommunitySurveyData(APIView):
@@ -431,6 +387,34 @@ class RaceStateData(APIView):
 
 class RaceCodeData(APIView):
 
+    def get_and_create_race_data(self, data_dict):
+        """
+            Function to get Race Code Data from dictionary
+            and populate Race Table 
+        """
+
+        try:
+            print("try in GCRD: ", type(data_dict))
+            data_value = data_dict['tables'].get('B02001').get('columns')
+            print('values: ', data_value)
+
+            for i in data_value:
+                race_id = i
+                race_name = data_value.get(i).get("name")
+
+                try:
+                    race_data = Race.objects.get(race_id=race_id)
+                    print('GCRD-race_data: try get: \n', race_data)
+                except:
+                    racedb_data = Race.objects.create(
+                        race_id=race_id,
+                        race_name=race_name
+                    )
+                    print('GCRD-racedb_data: except create \n', racedb_data)
+
+        except Exception as e:
+            print("Error in GRD:", e)
+
     def get(self, request):
 
         try:
@@ -452,7 +436,7 @@ class RaceCodeData(APIView):
             data_dict = read_json_file()
             # print('data_dict:======= ', data_dict)
 
-            get_and_create_race_data(data_dict)
+            self.get_and_create_race_data(data_dict)
 
             return Response(data_dict)
 
@@ -460,7 +444,69 @@ class RaceCodeData(APIView):
             print("Error in RRD-POST: ", e)
 
 
-class CountyDetailData(APIView):
+class StateCountyDetailData(APIView):
+
+    def get_and_create_state_county_data(self, data_dict):
+        """
+            Function to get State/County Data from dictionary 
+            and populate State/County Table 
+        """
+
+        try:
+            print("try in GCCD: ", type(data_dict))
+            data_value = data_dict['geography']
+            # print('data_value: ', data_value)
+
+            for i in data_value:
+
+                code_initial = i
+                code_name = data_value.get(code_initial).get("name")
+
+                # Checking and Insert State's Detail
+                if code_initial[0:5] == '04000':
+                    print("Getting State", code_initial[5:9])
+
+                    state_id = code_initial[5:9]
+                    state_name = code_name
+                    state_ref_id = code_initial
+
+                    try:
+                        state_data = State.objects.get(state_id=state_id)
+                        print('GCCD-state_data: try get \n', state_data)
+                    except:
+                        statedb_data = State.objects.create(
+                            state_id=state_id,
+                            state_name=state_name,
+                            state_ref_id=state_ref_id
+                        )
+                        print('GCCD-statedb_data: except create', statedb_data)
+
+                # Checking and Insert County's Detail
+                elif code_initial[0:5] == '05000':
+
+                    county_id = code_initial
+                    county_name = code_name.split(',')[0]
+                    state_id = code_initial[5:9]
+
+                    state_data = State.objects.get(state_id=state_id)
+
+                    try:
+
+                        county_data = County.objects.get(county_id=county_id)
+                        print('GCCD-county_data: try get \n', county_data)
+                    except:
+                        county_data = County.objects.create(
+                            county_id=county_id,
+                            county_name=county_name,
+                            state=state_data
+                        )
+                        print('GCCD-county_data: except create \n', county_data)
+
+                else:
+                    print("NOT Relevent Data")
+
+        except Exception as e:
+            print("Error in GCCD: ", e)
 
     def get(self, request):
 
@@ -468,7 +514,7 @@ class CountyDetailData(APIView):
             state_data = State.objects.all()
             county_data = County.objects.all()
 
-            new_dict={}
+            new_dict = {}
 
             if state_data.exists() and county_data.exists():
                 print("Inside If --")
@@ -497,9 +543,97 @@ class CountyDetailData(APIView):
             data_dict = read_json_file()
             print('data_dict in CD : ', type(data_dict))
 
-            get_and_create_state_county_data(data_dict)
+            self.get_and_create_state_county_data(data_dict)
 
             return Response(data_dict)
 
         except Exception as e:
             print("Error in CD-POST: ", e)
+
+
+class RaceErrorEstimateData(APIView):
+
+    def get_and_create_race_error_estimate(self, data_dict):
+
+        try:
+            print("In GCREE: ", type(data_dict))
+            data_value = data_dict['data']
+            print('data_value: ', data_value)
+
+            county_data = County.objects.all()
+
+            for county in county_data:
+
+                if county.county_id in data_value:
+                    print('county.county_id: ', county.county_id)
+
+                    race_value = data_value.get(county.county_id).get("B02001")
+                    print('race_value: ', race_value)
+
+                    race_code = Race.objects.all()
+
+                    for race in race_code:
+
+                        # Race_Estimate
+                        race_estimate = race_value.get(
+                            'estimate').get(race.race_id)
+                        print('race_estimate: -->', race_estimate)
+
+                        try:
+                            race_estimate_detail = RaceEstimate.objects.get(
+                                county_id=county.county_id, race_id=race.race_id)
+                            print('race_estimate_detail: In TRY=== ',
+                                  race_estimate_detail)
+
+                        except:
+
+                            race_estimate_detail = RaceEstimate.objects.create(
+                                race_estimate_value=race_estimate,
+                                county_id=county.county_id,
+                                race_id=race.race_id
+                            )
+                            print('race_estimate_detail: In EXCEPT=== ',
+                                  race_estimate_detail)
+
+                        # # Race_Error
+                        # race_error = race_value.get('error').get(race.race_id)
+                        # print('race_error: ==<', race_error)
+
+                        # try:
+                        #     race_error_detail = RaceError.objects.get(
+                        #         county_id=county.county_id, race_id=race.race_id)
+                        #     print('race_error_detail: In TRY---',
+                        #           race_error_detail)
+
+                        # except:
+
+                        #     race_error_detail = RaceError.objects.create(
+                        #         race_error_value=race_error,
+                        #         county_id=county.county_id,
+                        #         race_id=race.race_id
+                        #     )
+                        #     print('race_error_detail: In EXCEPT--',
+                        #           race_error_detail)
+
+        except Exception as e:
+            print('Error in GCREE: ', e)
+
+    def get(self, request):
+
+        try:
+            return Response("IN REED")
+        except Exception as e:
+            print("Error in REED-GET:", e)
+
+    def post(self, request):
+
+        try:
+            data_dict = read_json_file()
+            print('data_dict in REED: ', type(data_dict))
+
+            self.get_and_create_race_error_estimate(data_dict)
+
+            return Response(data_dict)
+
+        except Exception as e:
+            print("Error in REED-POST:", e)
