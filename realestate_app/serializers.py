@@ -27,11 +27,11 @@ class RaceEstimateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RaceEstimate
-        fields = '__all__'
+        fields = ['race_estimate_value', 'county_id', 'race_id']
 
 
 class RaceErrorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RaceError
-        fields = '__all__'
+        fields = ['race_error_value', 'county_id', 'race_id']

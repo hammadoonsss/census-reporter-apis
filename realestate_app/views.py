@@ -10,7 +10,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from realestate_app.models import County, Race, RaceError, RaceEstimate, State
-from realestate_app.serializers import CountySerializer, RaceSerializer, StateSerializer
+
+from realestate_app.paginations import CustomPagination
+
+from realestate_app.serializers import (
+    CountySerializer, RaceEstimateSerializer, RaceSerializer, StateSerializer)
 
 from realestate_bot.settings import FTP_HOST, FTP_PASS, FTP_USER
 
@@ -227,6 +231,9 @@ def read_json_file():
         print("Error in RJF: ", e)
 
 
+# Census Reporter APIs Evaluation
+
+
 class AmericanCommunitySurveyData(APIView):
 
     def get(self, request):
@@ -328,6 +335,9 @@ class RaceMultipleStateData(APIView):
 
         except Exception as e:
             return Response({"Error in RMSD":  f"{e}"})
+
+
+# Main APIs - To Populate Data
 
 
 class RaceStateData(APIView):
@@ -595,25 +605,25 @@ class RaceErrorEstimateData(APIView):
                             print('race_estimate_detail: In EXCEPT=== ',
                                   race_estimate_detail)
 
-                        # # Race_Error
-                        # race_error = race_value.get('error').get(race.race_id)
-                        # print('race_error: ==<', race_error)
+                        # Race_Error
+                        race_error = race_value.get('error').get(race.race_id)
+                        print('race_error: ==<', race_error)
 
-                        # try:
-                        #     race_error_detail = RaceError.objects.get(
-                        #         county_id=county.county_id, race_id=race.race_id)
-                        #     print('race_error_detail: In TRY---',
-                        #           race_error_detail)
+                        try:
+                            race_error_detail = RaceError.objects.get(
+                                county_id=county.county_id, race_id=race.race_id)
+                            print('race_error_detail: In TRY---',
+                                  race_error_detail)
 
-                        # except:
+                        except:
 
-                        #     race_error_detail = RaceError.objects.create(
-                        #         race_error_value=race_error,
-                        #         county_id=county.county_id,
-                        #         race_id=race.race_id
-                        #     )
-                        #     print('race_error_detail: In EXCEPT--',
-                        #           race_error_detail)
+                            race_error_detail = RaceError.objects.create(
+                                race_error_value=race_error,
+                                county_id=county.county_id,
+                                race_id=race.race_id
+                            )
+                            print('race_error_detail: In EXCEPT--',
+                                  race_error_detail)
 
         except Exception as e:
             print('Error in GCREE: ', e)
@@ -637,3 +647,71 @@ class RaceErrorEstimateData(APIView):
 
         except Exception as e:
             print("Error in REED-POST:", e)
+
+# Main APIs - To Fetch Data.
+
+
+class StateRaceEstimateData(APIView, CustomPagination):
+
+    def get(self, request):
+        try:
+            # if request.data:
+
+                symbol = request.data.get("Symbol")
+                print('symbol: ', symbol)
+                state = request.data.get("State")
+                print('state: ', state)
+
+                state_data = State.objects.get(state_name=state)
+                print('state_data:--- ', state_data)
+
+                state_county = County.objects.filter(
+                    state_id=state_data).values_list('county_id', flat=True)
+                print('state_county:--- ', state_county)
+
+                race_estimate = RaceEstimate.objects.filter(
+                    county_id__in=state_county)
+                print('race_estimate: ----', race_estimate)
+
+                county_race_list = []
+
+                for data in race_estimate:
+
+                    race_dict = {}
+
+                    race_dict['State_id'] = data.county.state.state_id
+                    # race_dict['State_name'] = data.county.state.state_name
+
+                    race_dict['County_id'] = data.county_id
+                    # race_dict['County_name'] = data.county.county_name
+
+                    race_dict['Race_id'] = data.race_id
+                    race_dict['Race_name'] = data.race.race_name
+                    race_dict['Race_Estimate_value'] = data.race_estimate_value
+
+                    county_race_list.append(race_dict)
+
+                # # Pagination -1
+                # result = self.paginate_queryset(race_estimate, request)
+                # race_serializer = RaceEstimateSerializer(result, many=True)
+                # print('result: ', result)
+                # return self.get_paginated_response(race_serializer.data)
+
+                # Serializer-DB_data
+                # race_serializer = RaceEstimateSerializer(race_estimate, many=True)
+                # return Response(race_serializer.data)
+
+                # Dictionary-county_race_list
+                # return Response({'data': county_race_list})
+
+                # Pagination -2
+                result = self.paginate_queryset(county_race_list, request)
+                # race_serializer = RaceEstimateSerializer(result, many=True)
+                print('result: ', result)
+                return self.get_paginated_response(result)
+
+            # else:
+            #     return Response({'Error': "In valid request!!"})
+        except Exception as e:
+            print("Error in RSD-GET:", e)
+            return Response({"In Exception": e})

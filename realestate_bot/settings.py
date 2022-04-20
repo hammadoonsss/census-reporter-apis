@@ -145,3 +145,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 FTP_HOST = env('FTP_HOST')
 FTP_USER = env('FTP_USER')
 FTP_PASS = env('FTP_PASS')
+
+# Pagination
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}
