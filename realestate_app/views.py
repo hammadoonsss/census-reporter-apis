@@ -62,25 +62,6 @@ def upload_file():
         print("Error in UPF:", e)
 
 
-def get_server_file():
-    """
-        Funtion to get JSON file from the FTP Server
-    """
-
-    try:
-        ftp = ftp_connect()
-
-        filename = f"{base_path}/static/download/racedata.json"
-        ftp.set_pasv(False)
-
-        with open(filename, 'wb') as file:
-            ftp.retrbinary(
-                "RETR Housing_App_Unit/racestatedata01.json", file.write)
-
-    except Exception as e:
-        print("Error in GTF: ", e)
-
-
 def convert_list_string(code_list):
     """
         Function to Convert code_list into String format
@@ -99,7 +80,7 @@ def convert_list_string(code_list):
         print("Error in CLS")
 
 
-def get_state_dict(state):
+def get_state_code(state):
     """
         Function to get US State Code based on their abbreviation dictionary
     """
@@ -319,7 +300,7 @@ class RaceMultipleStateData(APIView):
             data['table_ids'] = multi_symbol
 
             state_list = request.data.get('State')
-            state_code_list = get_state_dict(state_list)
+            state_code_list = get_state_code(state_list)
             multi_state = convert_list_string(state_code_list)
             data['geo_ids'] = multi_state
 
@@ -342,6 +323,37 @@ class RaceMultipleStateData(APIView):
 
 class RaceStateData(APIView):
 
+    def get_server_file(self):
+        """
+            Funtion to get JSON file from the FTP Server
+        """
+
+        try:
+            ftp = ftp_connect()
+
+            filename = f"{base_path}/static/download/racedata.json"
+            ftp.set_pasv(False)
+
+            with open(filename, 'wb') as file:
+                ftp.retrbinary(
+                    "RETR Housing_App_Unit/racestatedata01.json", file.write)
+
+        except Exception as e:
+            print("Error in GTF: ", e)
+
+
+    def get(self, request):
+        try:
+            print("---before get a file")
+            self.get_server_file()
+            print("---after get a file")
+
+            return Response({'msg': "File Downloded"})
+
+        except Exception as e:
+            print("Error in ftp_get inside::", e)
+            return Response({'Error in RSD-G': f'{e}'})
+
     def post(self, request):
 
         try:
@@ -351,7 +363,7 @@ class RaceStateData(APIView):
             multi_symbol = convert_list_string(symbol_list)
 
             state_list = request.data.get('State')
-            state_code_list = get_state_dict(state_list)
+            state_code_list = get_state_code(state_list)
             multi_state = convert_list_string(state_code_list)
 
             response = requests.get(
@@ -380,19 +392,12 @@ class RaceStateData(APIView):
             except Exception as e:
                 print("Error in ftp_upload inside:::", e)
 
-            try:
-                # print("---before getting a file")
-                get_server_file()
-                # print("---after getting a file")
-            except Exception as e:
-                print("Error in ftp_get inside::", e)
-
                 ftp.quit()
 
             return Response(race_data)
 
         except Exception as e:
-            return Response({"Error in RSSD":  f"{e}"})
+            return Response({"Error in RSD-P":  f"{e}"})
 
 
 class RaceCodeData(APIView):
@@ -438,7 +443,8 @@ class RaceCodeData(APIView):
                 return Response("No Data Available")
 
         except Exception as e:
-            print("Error in RRD-GET: ", e)
+            print("Error in RCD-GET: ", e)
+            return Response({'Error in RCD-G': e})
 
     def post(self, request):
 
@@ -451,7 +457,8 @@ class RaceCodeData(APIView):
             return Response(data_dict)
 
         except Exception as e:
-            print("Error in RRD-POST: ", e)
+            print("Error in RCD-POST: ", e)
+            return Response({'Error in RCD-P': e})
 
 
 class StateCountyDetailData(APIView):
@@ -648,6 +655,7 @@ class RaceErrorEstimateData(APIView):
         except Exception as e:
             print("Error in REED-POST:", e)
 
+
 # Main APIs - To Fetch Data.
 
 
@@ -655,7 +663,7 @@ class StateRaceEstimateData(APIView, CustomPagination):
 
     def get(self, request):
         try:
-            # if request.data:
+            if request.data:  
 
                 symbol = request.data.get("Symbol")
                 print('symbol: ', symbol)
@@ -710,8 +718,8 @@ class StateRaceEstimateData(APIView, CustomPagination):
                 print('result: ', result)
                 return self.get_paginated_response(result)
 
-            # else:
-            #     return Response({'Error': "In valid request!!"})
+            else:
+                return Response({'Error': "In valid request!!"})
         except Exception as e:
             print("Error in RSD-GET:", e)
             return Response({"In Exception": e})
