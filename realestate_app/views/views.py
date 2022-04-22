@@ -16,11 +16,10 @@ from realestate_app.paginations import CustomPagination
 from realestate_app.serializers import (
     CountySerializer, RaceEstimateSerializer, RaceSerializer, StateSerializer)
 
-from realestate_bot.settings import FTP_HOST, FTP_PASS, FTP_USER
+from realestate_app.utils import convert_list_string,get_state_code
 
-
-base_url = "https://api.censusreporter.org"
-base_path = os.getcwd()
+from realestate_bot.settings import (FTP_HOST, FTP_PASS, FTP_USER,
+                                    base_url,base_path)
 
 
 def ftp_connect():
@@ -62,99 +61,6 @@ def upload_file():
         print("Error in UPF:", e)
 
 
-def convert_list_string(code_list):
-    """
-        Function to Convert code_list into String format
-    """
-
-    try:
-
-        if len(code_list) and type(code_list) == list:
-            code_string = (',').join(code_list)
-            # print('code_string:------- ', code_string, type(code_string))
-            return code_string
-        else:
-            print("In CLS else")
-            return None
-    except Exception as e:
-        print("Error in CLS")
-
-
-def get_state_code(state):
-    """
-        Function to get US State Code based on their abbreviation dictionary
-    """
-
-    state_code = {
-        "AL": "050|04000US01",
-        "AK": "050|04000US02",
-        "AZ": "050|04000US04",
-        "AR": "050|04000US05",
-        "CA": "050|04000US06",
-        "CO": "050|04000US08",
-        "CT": "050|04000US09",
-        "DE": "050|04000US10",
-        "DC": "050|04000US11",
-        "FL": "050|04000US12",
-        "GA": "050|04000US13",
-        "HI": "050|04000US15",
-        "ID": "050|04000US16",
-        "IL": "050|04000US17",
-        "IN": "050|04000US18",
-        "IA": "050|04000US19",
-        "KS": "050|04000US20",
-        "KY": "050|04000US21",
-        "LA": "050|04000US22",
-        "ME": "050|04000US23",
-        "MD": "050|04000US24",
-        "MA": "050|04000US25",
-        "MI": "050|04000US26",
-        "MN": "050|04000US27",
-        "MS": "050|04000US28",
-        "MO": "050|04000US29",
-        "MT": "050|04000US30",
-        "NE": "050|04000US31",
-        "NV": "050|04000US32",
-        "NH": "050|04000US33",
-        "NJ": "050|04000US34",
-        "NM": "050|04000US35",
-        "NY": "050|04000US36",
-        "NC": "050|04000US37",
-        "ND": "050|04000US38",
-        "OH": "050|04000US39",
-        "OK": "050|04000US40",
-        "OR": "050|04000US41",
-        "PA": "050|04000US42",
-        "RI": "050|04000US44",
-        "SC": "050|04000US45",
-        "SD": "050|04000US46",
-        "TN": "050|04000US47",
-        "TX": "050|04000US48",
-        "UT": "050|04000US49",
-        "VT": "050|04000US50",
-        "VA": "050|04000US51",
-        "WA": "050|04000US53",
-        "WV": "050|04000US54",
-        "WI": "050|04000US55",
-        "WY": "050|04000US56",
-        "PR": "050|04000US72",
-        "VI": "050|04000US78",
-    }
-
-    state_list = []
-    try:
-        print("--state--0-", state)
-
-        for i in state:
-            if i in state_code:
-                state_list.append(state_code[i])
-            else:
-                return None
-        return state_list
-    except Exception as e:
-        print("Error as in GSD")
-
-
 def write_json_file(data):
     """
         Function to Write JSON File
@@ -170,27 +76,6 @@ def write_json_file(data):
 
     except Exception as e:
         print("Error in WJF", e)
-
-
-def make_request(method, endpoint, data):
-    """
-        Function to make request to base_url with specific endpoints a/c to the method given
-    """
-
-    if method == "GET":
-        try:
-            # print("____", base_url + endpoint,)
-            response = requests.get(base_url + endpoint, params=data)
-        except Exception as e:
-            print("Error in make Request GET")
-
-    else:
-        raise ValueError()
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print("Error while making get request")
 
 
 def read_json_file():
@@ -211,114 +96,7 @@ def read_json_file():
     except Exception as e:
         print("Error in RJF: ", e)
 
-
-# Census Reporter APIs Evaluation
-
-
-class AmericanCommunitySurveyData(APIView):
-
-    def get(self, request):
-
-        try:
-            response = requests.get(
-                f"{base_url}/data/show/acs2020_5yr?table_ids=B01001,B01002&geo_ids=16000US5367000")
-            data_value = response.json()
-            # print('data_value: \n', data_value)
-
-            return Response(data_value)
-
-        except Exception as e:
-            print("Error : ", e)
-
-
-class TabulationData(APIView):
-
-    def get(self, request):
-
-        try:
-            response = requests.get(
-                f"{base_url}/tabulation/02001")
-            tabulation_data = response.json()
-            # print('tabulation_data: \n', tabulation_data)
-
-            return Response(tabulation_data)
-
-        except Exception as e:
-            print("Error in CRD: ", e)
-
-
-class AllStatesData(APIView):
-
-    def get(self, request):
-
-        try:
-            response = requests.get(
-                f"{base_url}/1.0/geo/show/tiger2020?geo_ids=040|01000US")
-
-            all_states_data = response.json()
-            # print('all_states_data: \n', all_states_data)
-            json0_data = json.dumps(all_states_data)
-            json1_data = json.loads(json0_data)
-            # print('json1_data: \n', json1_data['features'])
-            # for i in json1_data['features']:
-            #     print ("____________", i)
-
-            return Response(all_states_data)
-
-        except Exception as e:
-            print("Error in ASD: ", e)
-
-
-class AllCountiesData(APIView):
-
-    def get(self, request):
-
-        try:
-            response = requests.get(
-                "https://api.censusreporter.org/1.0/data/show/latest?table_ids=B02001&geo_ids=050|04000US53")
-
-            all_counties_data = response.json()
-            # print('all_counties_data: \n', all_counties_data)
-
-            return Response(all_counties_data)
-
-        except Exception as e:
-            print("Error in ACD: ", e)
-
-
-class RaceMultipleStateData(APIView):
-
-    def post(self, request):
-
-        try:
-            data = dict()
-            # data['latest'] = 'latest'
-            # print('request.data: ', request.data)
-
-            symbol_list = request.data.get('Symbol')
-            multi_symbol = convert_list_string(symbol_list)
-            data['table_ids'] = multi_symbol
-
-            state_list = request.data.get('State')
-            state_code_list = get_state_code(state_list)
-            multi_state = convert_list_string(state_code_list)
-            data['geo_ids'] = multi_state
-
-            data_value = make_request("GET", "/1.0/data/show/latest", data)
-            # print("data_value: --++---", data_value)
-
-            # response = requests.get(
-            #     f"{base_url}/data/show/latest?table_ids={multi_symbol}&geo_ids={multi_state}")
-
-            # race_data = response.json()
-
-            return Response(data_value)
-
-        except Exception as e:
-            return Response({"Error in RMSD":  f"{e}"})
-
-
-# Main APIs - To Populate Data
+# DataBase APIs - To Populate Data in DB
 
 
 class RaceStateData(APIView):
@@ -372,10 +150,10 @@ class RaceStateData(APIView):
             race_data = response.json()
             print('race_data============: \n', type(race_data))
 
-            s = json.dumps(race_data)
-            print('s===========: \n', type(s))
+            store_data = json.dumps(race_data)
+            print('s===========: \n', type(store_data))
 
-            write_json_file(s)
+            write_json_file(store_data)
 
             print("Before Ts json file write.")
             time.sleep(2)
@@ -641,6 +419,7 @@ class RaceErrorEstimateData(APIView):
             return Response("IN REED")
         except Exception as e:
             print("Error in REED-GET:", e)
+            return Response({'Error': f'{e}'})
 
     def post(self, request):
 

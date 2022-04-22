@@ -45,11 +45,17 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'corsheaders',
     'realestate_app.apps.RealestateAppConfig',
     'user.apps.UserConfig',
 ]
 
+# Only Development (NOT Recommended in Production)
+CORS_ORIGIN_ALLOW_ALL = True
+
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -94,7 +100,7 @@ DATABASES = {
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
         }
-        
+
     }
 }
 
@@ -151,3 +157,6 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
 }
+
+base_path = os.getcwd()
+base_url = env('BASE_URL')
