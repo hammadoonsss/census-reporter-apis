@@ -9,36 +9,36 @@ from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from realestate_app.models import County, Race, RaceError, RaceEstimate, State
+from realestate_app.models import (County, Race, State,
+                                   RaceError, RaceEstimate,)
 
 from realestate_app.paginations import CustomPagination
 
-from realestate_app.serializers import (
-    CountySerializer, RaceEstimateSerializer, RaceSerializer, StateSerializer)
+from realestate_app.serializers import (CountySerializer, RaceEstimateSerializer,
+                                        RaceSerializer, StateSerializer)
 
-from realestate_app.utils import convert_list_string,get_state_code
+from realestate_app.utils import (convert_list_string, ftp_connect, get_file_ftp, get_state_code,
+                                  json_file_write, upload_file_ftp)
 
 from realestate_bot.settings import (FTP_HOST, FTP_PASS, FTP_USER,
-                                    base_url,base_path)
+                                     base_url, base_path)
 
 
-def ftp_connect():
-    """
-        Function for making Connection to FTP Server
-    """
-    try:
-        # print("___--___", FTP_HOST, FTP_USER, FTP_PASS)
+# def ftp_connect():
+#     """
+#         Function for making Connection to FTP Server
+#     """
+#     try:
+#         # print("___--___", FTP_HOST, FTP_USER, FTP_PASS)
+#         # Connect to FTP Server
+#         ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
+#         print('ftp:--- ', ftp)
+#         # force utf-8 encoding
+#         ftp.encoding = "utf-8"
+#         return ftp
 
-        # Connect to FTP Server
-        ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
-        print('ftp:--- ', ftp)
-
-        # force utf-8 encoding
-        ftp.encoding = "utf-8"
-        return ftp
-
-    except Exception as e:
-        print("Error in ftp: \n", e)
+#     except Exception as e:
+#         print("Error in ftp: \n", e)
 
 
 def upload_file():
@@ -48,7 +48,6 @@ def upload_file():
 
     try:
         ftp = ftp_connect()
-
         filename = f"{base_path}/static/upload/racedata.json"
         ftp.set_pasv(False)
 
@@ -56,7 +55,6 @@ def upload_file():
             # data = file.read()
             # print('data: ', data)
             ftp.storbinary("STOR Housing_App_Unit/racestatedata01.json", file)
-
     except Exception as e:
         print("Error in UPF:", e)
 
@@ -71,9 +69,7 @@ def write_json_file(data):
 
         with open(file_path, "w") as f:
             f.write(data)
-
             f.close()
-
     except Exception as e:
         print("Error in WJF", e)
 
@@ -108,7 +104,6 @@ class RaceStateData(APIView):
 
         try:
             ftp = ftp_connect()
-
             filename = f"{base_path}/static/download/racedata.json"
             ftp.set_pasv(False)
 
@@ -119,13 +114,12 @@ class RaceStateData(APIView):
         except Exception as e:
             print("Error in GTF: ", e)
 
-
     def get(self, request):
+
         try:
             print("---before get a file")
             self.get_server_file()
             print("---after get a file")
-
             return Response({'msg': "File Downloded"})
 
         except Exception as e:
@@ -188,12 +182,12 @@ class RaceCodeData(APIView):
 
         try:
             print("try in GCRD: ", type(data_dict))
-            data_value = data_dict['tables'].get('B02001').get('columns')
-            print('values: ', data_value)
+            race_values = data_dict['tables'].get('B02001').get('columns')
+            print('values: ', race_values)
 
-            for i in data_value:
-                race_id = i
-                race_name = data_value.get(i).get("name")
+            for data in race_values:
+                race_id = data
+                race_name = race_values.get(race_id).get("name")
 
                 try:
                     race_data = Race.objects.get(race_id=race_id)
@@ -347,13 +341,17 @@ class StateCountyDetailData(APIView):
 
 
 class RaceErrorEstimateData(APIView):
+    """
+        To get Race Error/Estimate Data from dictionary 
+        and populate Race_Error/Race_Estimate Table 
+    """
 
     def get_and_create_race_error_estimate(self, data_dict):
 
         try:
             print("In GCREE: ", type(data_dict))
             data_value = data_dict['data']
-            print('data_value: ', data_value)
+            # print('data_value: ', data_value)
 
             county_data = County.objects.all()
 
@@ -367,9 +365,15 @@ class RaceErrorEstimateData(APIView):
 
                     race_code = Race.objects.all()
 
+                    race_total = race_value.get('estimate').get('B02001001')
+
+                    county_obj = County.objects.get(county_id=county.county_id)
+                    county_obj.race_total = race_total
+                    county_obj.save()
+
                     for race in race_code:
 
-                        # Race_Estimate
+                        # For Race_Estimate
                         race_estimate = race_value.get(
                             'estimate').get(race.race_id)
                         print('race_estimate: -->', race_estimate)
@@ -379,9 +383,7 @@ class RaceErrorEstimateData(APIView):
                                 county_id=county.county_id, race_id=race.race_id)
                             print('race_estimate_detail: In TRY=== ',
                                   race_estimate_detail)
-
                         except:
-
                             race_estimate_detail = RaceEstimate.objects.create(
                                 race_estimate_value=race_estimate,
                                 county_id=county.county_id,
@@ -390,7 +392,7 @@ class RaceErrorEstimateData(APIView):
                             print('race_estimate_detail: In EXCEPT=== ',
                                   race_estimate_detail)
 
-                        # Race_Error
+                        # For Race_Error
                         race_error = race_value.get('error').get(race.race_id)
                         print('race_error: ==<', race_error)
 
@@ -399,9 +401,7 @@ class RaceErrorEstimateData(APIView):
                                 county_id=county.county_id, race_id=race.race_id)
                             print('race_error_detail: In TRY---',
                                   race_error_detail)
-
                         except:
-
                             race_error_detail = RaceError.objects.create(
                                 race_error_value=race_error,
                                 county_id=county.county_id,
@@ -433,72 +433,82 @@ class RaceErrorEstimateData(APIView):
 
         except Exception as e:
             print("Error in REED-POST:", e)
+            return Response({'Error': f'{e}'})
+
+# ------------------------------------------------------------------
 
 
-# Main APIs - To Fetch Data.
+class TopicDetails(APIView):
+    """
+        To get data about particular Topic from Census Reporter API
+        and create JSON file of Topic_data
 
+    Args:
+        APIView (_type_): _description_
+    """
 
-class StateRaceEstimateData(APIView, CustomPagination):
+    def post(self, request):
+
+        try:
+            if request.data:
+                symbol_list = request.data.get('Symbol')
+                multi_symbol = convert_list_string(symbol_list)
+
+                state_list = request.data.get('State')
+                state_code_list = get_state_code(state_list)
+                multi_state = convert_list_string(state_code_list)
+
+                response = requests.get(
+                    f"{base_url}/1.0/data/show/latest?table_ids={multi_symbol}&geo_ids={multi_state}")
+
+                data_values = response.json()
+                print('data_values---------: \n', type(data_values))
+
+                store_data = json.dumps(data_values)
+                print('sd----: \n', type(store_data))
+
+                file_name = request.data.get('File_Name')
+                print('file_name: =----', file_name)
+
+                json_file_write(store_data, file_name)
+
+                return Response(data_values)
+            else:
+                print("In Else part:NO Request")
+
+        except Exception as e:
+            print("Error in ToS-POST", e)
+            return Response({'msg': f'{e}'})
+
+class UpdateFTPFile(APIView):
 
     def get(self, request):
         try:
-            if request.data:  
-
-                symbol = request.data.get("Symbol")
-                print('symbol: ', symbol)
-                state = request.data.get("State")
-                print('state: ', state)
-
-                state_data = State.objects.get(state_name=state)
-                print('state_data:--- ', state_data)
-
-                state_county = County.objects.filter(
-                    state_id=state_data).values_list('county_id', flat=True)
-                print('state_county:--- ', state_county)
-
-                race_estimate = RaceEstimate.objects.filter(
-                    county_id__in=state_county)
-                print('race_estimate: ----', race_estimate)
-
-                county_race_list = []
-
-                for data in race_estimate:
-
-                    race_dict = {}
-
-                    race_dict['State_id'] = data.county.state.state_id
-                    # race_dict['State_name'] = data.county.state.state_name
-
-                    race_dict['County_id'] = data.county_id
-                    # race_dict['County_name'] = data.county.county_name
-
-                    race_dict['Race_id'] = data.race_id
-                    race_dict['Race_name'] = data.race.race_name
-                    race_dict['Race_Estimate_value'] = data.race_estimate_value
-
-                    county_race_list.append(race_dict)
-
-                # # Pagination -1
-                # result = self.paginate_queryset(race_estimate, request)
-                # race_serializer = RaceEstimateSerializer(result, many=True)
-                # print('result: ', result)
-                # return self.get_paginated_response(race_serializer.data)
-
-                # Serializer-DB_data
-                # race_serializer = RaceEstimateSerializer(race_estimate, many=True)
-                # return Response(race_serializer.data)
-
-                # Dictionary-county_race_list
-                # return Response({'data': county_race_list})
-
-                # Pagination -2
-                result = self.paginate_queryset(county_race_list, request)
-                # race_serializer = RaceEstimateSerializer(result, many=True)
-                print('result: ', result)
-                return self.get_paginated_response(result)
-
+            if request.data:
+                file_name = request.data.get('File_Name')
+                print('file_name: ', file_name)
+                get_file_ftp(file_name)
+    
+                return Response({"Msg":f"{file_name} downloaded from server."})
             else:
-                return Response({'Error': "In valid request!!"})
+                print("UFTPF In Else-GET")
         except Exception as e:
-            print("Error in RSD-GET:", e)
-            return Response({"In Exception": e})
+            print("Error in UFTPF-GET:", e )
+            return Response({'msg': f'{e}'})
+
+
+    def post(self, request):
+        try:
+            if request.data:
+                file_name = request.data.get('File_Name')
+                print('file_name: ', file_name)
+                upload_file_ftp(file_name)
+                ftp = ftp_connect()
+                ftp.set_pasv(False)
+                ftp.dir("Hoising_App_Unit/")
+                return Response({"Msg":f"{file_name} uploaded on server."})
+            else:
+                print("UFTPF In Else-POST")
+        except Exception as e:
+            print("Error in UFTPF-POST:", e)
+            return Response({'msg':f'{e}'})

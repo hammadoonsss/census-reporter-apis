@@ -38,6 +38,7 @@ class County(models.Model):
     county_name = models.CharField(max_length=225, blank=True, null=True)
     state = models.ForeignKey(
         'State', on_delete=models.CASCADE, related_name='counties', null=True)
+    race_total = models.FloatField(blank=True, null=True)
 
     class Meta:
         verbose_name = 'County'
@@ -56,6 +57,7 @@ class RaceEstimate(models.Model):
         'County', on_delete=models.CASCADE, related_name='county_estimate', null=True)
 
     class Meta:
+        unique_together = ['race', 'county']
         verbose_name = 'Race_Estimate'
 
 
@@ -68,4 +70,5 @@ class RaceError(models.Model):
         'County', on_delete=models.CASCADE, related_name='county_error', null=True)
 
     class Meta:
+        unique_together = ['race', 'county']
         verbose_name = 'Race_Error'

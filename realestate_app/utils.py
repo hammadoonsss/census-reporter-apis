@@ -1,6 +1,26 @@
 import json
+import ftplib
 
-from realestate_bot.settings import base_path
+from realestate_bot.settings import (FTP_HOST, FTP_PASS, FTP_USER,
+                                     base_path)
+
+
+def ftp_connect():
+    """
+        Function for making Connection to FTP Server
+    """
+    try:
+        # print("___--___", FTP_HOST, FTP_USER, FTP_PASS)
+        # Connect to FTP Server
+        ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
+        print('ftp:--- ', ftp)
+        # force utf-8 encoding
+        ftp.encoding = "utf-8"
+        return ftp
+
+    except Exception as e:
+        print("Error in ftp: \n", e)
+
 
 def convert_list_string(code_list):
     """
@@ -38,7 +58,7 @@ def get_state_code(state):
         print('state_code: ', state_code)
 
     except Exception as e:
-        print("Error in SC_JSON: ",e)
+        print("Error in SC_JSON: ", e)
 
     state_list = []
     try:
@@ -52,3 +72,56 @@ def get_state_code(state):
         return state_list
     except Exception as e:
         print("Error as in GSD")
+
+
+def json_file_write(data, name):
+    """
+        Function to Write JSON File
+    """
+
+    try:
+        print('name',  name)
+        file_path = f"{base_path}/static/upload/{name}"
+        print('file_path: ', file_path)
+
+        with open(file_path, "w") as f:
+            f.write(data)
+            f.close()
+    except Exception as e:
+        print("Error in WJF", e)
+
+
+def upload_file_ftp(name):
+    """
+        Function to Upload JSON file on the FTP Server
+    """
+
+    try:
+        ftp = ftp_connect()
+        filename = f"{base_path}/static/upload/{name}"
+        ftp.set_pasv(False)
+
+        with open(filename, "rb") as file:
+            # data = file.read()
+            # print('data: ', data)
+            ftp.storbinary(f"STOR Housing_App_Unit/{name}", file)
+    except Exception as e:
+        print("Error in UPF:", e)
+
+
+def get_file_ftp(name):
+        """
+            Funtion to Download JSON file from the FTP Server
+        """
+
+        try:
+            ftp = ftp_connect()
+            filename = f"{base_path}/static/download/{name}"
+            ftp.set_pasv(False)
+
+            with open(filename, 'wb') as file:
+                ftp.retrbinary(
+                    f"RETR Housing_App_Unit/{name}", file.write)
+
+        except Exception as e:
+            print("Error in GTF: ", e)
