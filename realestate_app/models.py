@@ -72,3 +72,43 @@ class RaceError(models.Model):
     class Meta:
         unique_together = ['race', 'county']
         verbose_name = 'Race_Error'
+
+
+class Income(models.Model):
+
+    income_id = models.CharField(
+        max_length=25, primary_key=True, blank=False, null=False)
+    income_name = models.CharField(max_length=225, blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Income_code'
+
+    def __str__(self):
+        return self.income_id
+
+
+
+class IncomeEstimate(models.Model):
+
+    income_estimate_value = models.FloatField(blank=True, null=True)
+    income = models.ForeignKey(
+        'Income', on_delete=models.CASCADE, related_name='income_estimate', null=True)
+    county = models.ForeignKey(
+        'County', on_delete=models.CASCADE, related_name='county_est_in', null=True)
+
+    class Meta:
+        unique_together = ['income', 'county']
+        verbose_name = 'Income_Estimate'
+
+
+class IncomeError(models.Model):
+
+    income_error_value = models.FloatField(blank=True, null=True)
+    income = models.ForeignKey(
+        'Income', on_delete=models.CASCADE, related_name='income_error', null=True)
+    county = models.ForeignKey(
+        'County', on_delete=models.CASCADE, related_name='county_err_in', null=True)
+
+    class Meta:
+        unique_together = ['income', 'county']
+        verbose_name = 'Income_Error'

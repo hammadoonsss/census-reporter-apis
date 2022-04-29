@@ -7,7 +7,7 @@ from realestate_app.views.census_views import(AllCountiesData, AllStatesData, Am
                                               TabulationData, SingleTopicStateData,)
 
 # Database Views Import
-from realestate_app.views.views import(RaceStateData, RaceCodeData, RaceErrorEstimateData,
+from realestate_app.views.views import(IncomeCodeData, RaceStateData, RaceCodeData, RaceErrorEstimateData,
                                        StateCountyDetailData, TopicDetails, UpdateFTPFile)
 
 # Race Views
@@ -46,7 +46,10 @@ urlpatterns = [
     # Race Error/Estimate
     path("race/error_estimate/data/", RaceErrorEstimateData.as_view(),
          name='race_error_estimate_data'),
-
+     
+     #Income Code
+     path("income_code/data/", IncomeCodeData.as_view(),
+         name='income_code_data'),
 
     # State Race Estimate Data
     path("state/race_estimate/data", StateRaceEstimateData.as_view(),

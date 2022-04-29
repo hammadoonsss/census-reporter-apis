@@ -110,18 +110,37 @@ def upload_file_ftp(name):
 
 
 def get_file_ftp(name):
-        """
-            Funtion to Download JSON file from the FTP Server
-        """
+    """
+        Funtion to Download JSON file from the FTP Server
+    """
 
-        try:
-            ftp = ftp_connect()
-            filename = f"{base_path}/static/download/{name}"
-            ftp.set_pasv(False)
+    try:
+        ftp = ftp_connect()
+        filename = f"{base_path}/static/download/{name}"
+        ftp.set_pasv(False)
 
-            with open(filename, 'wb') as file:
-                ftp.retrbinary(
-                    f"RETR Housing_App_Unit/{name}", file.write)
+        with open(filename, 'wb') as file:
+            ftp.retrbinary(
+                f"RETR Housing_App_Unit/{name}", file.write)
 
-        except Exception as e:
-            print("Error in GTF: ", e)
+    except Exception as e:
+        print("Error in GTF: ", e)
+
+
+def json_file_read(name):
+
+    try:
+        file_path = f"{base_path}/static/download/{name}"
+
+        with open(file_path, "r") as f:
+            data = f.read()
+            print('data in RJF:', type(data))
+            f.close()
+
+        data_dict = json.loads(data)
+        print('data_dict in RJF:', type(data_dict))
+
+        return data_dict
+
+    except Exception as e:
+        print("Error in RJF: ", e)

@@ -9,36 +9,21 @@ from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from realestate_app.models import (County, Race, State,
+from realestate_app.models import (County, Income, Race, State,
                                    RaceError, RaceEstimate,)
 
 from realestate_app.paginations import CustomPagination
 
-from realestate_app.serializers import (CountySerializer, RaceEstimateSerializer,
-                                        RaceSerializer, StateSerializer)
+from realestate_app.serializers import (CountySerializer,  StateSerializer,
+                                        RaceSerializer, RaceEstimateSerializer,
+                                        IncomeSerializer, )
 
-from realestate_app.utils import (convert_list_string, ftp_connect, get_file_ftp, get_state_code,
-                                  json_file_write, upload_file_ftp)
+from realestate_app.utils import (convert_list_string, get_state_code,
+                                  ftp_connect, get_file_ftp,  upload_file_ftp,
+                                  json_file_read, json_file_write,)
 
 from realestate_bot.settings import (FTP_HOST, FTP_PASS, FTP_USER,
                                      base_url, base_path)
-
-
-# def ftp_connect():
-#     """
-#         Function for making Connection to FTP Server
-#     """
-#     try:
-#         # print("___--___", FTP_HOST, FTP_USER, FTP_PASS)
-#         # Connect to FTP Server
-#         ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
-#         print('ftp:--- ', ftp)
-#         # force utf-8 encoding
-#         ftp.encoding = "utf-8"
-#         return ftp
-
-#     except Exception as e:
-#         print("Error in ftp: \n", e)
 
 
 def upload_file():
@@ -442,9 +427,6 @@ class TopicDetails(APIView):
     """
         To get data about particular Topic from Census Reporter API
         and create JSON file of Topic_data
-
-    Args:
-        APIView (_type_): _description_
     """
 
     def post(self, request):
@@ -480,6 +462,7 @@ class TopicDetails(APIView):
             print("Error in ToS-POST", e)
             return Response({'msg': f'{e}'})
 
+
 class UpdateFTPFile(APIView):
 
     def get(self, request):
@@ -488,14 +471,13 @@ class UpdateFTPFile(APIView):
                 file_name = request.data.get('File_Name')
                 print('file_name: ', file_name)
                 get_file_ftp(file_name)
-    
-                return Response({"Msg":f"{file_name} downloaded from server."})
+
+                return Response({"Msg": f"{file_name} downloaded from server."})
             else:
                 print("UFTPF In Else-GET")
         except Exception as e:
-            print("Error in UFTPF-GET:", e )
+            print("Error in UFTPF-GET:", e)
             return Response({'msg': f'{e}'})
-
 
     def post(self, request):
         try:
@@ -505,10 +487,76 @@ class UpdateFTPFile(APIView):
                 upload_file_ftp(file_name)
                 ftp = ftp_connect()
                 ftp.set_pasv(False)
-                ftp.dir("Hoising_App_Unit/")
-                return Response({"Msg":f"{file_name} uploaded on server."})
+                ftp.dir("Housing_App_Unit/")
+                return Response({"Msg": f"{file_name} uploaded on server."})
             else:
                 print("UFTPF In Else-POST")
         except Exception as e:
             print("Error in UFTPF-POST:", e)
-            return Response({'msg':f'{e}'})
+            return Response({'msg': f'{e}'})
+
+# ---------------------------------------------------------------------------
+
+# Income Code Data
+
+
+class IncomeCodeData(APIView):
+
+    def get_and_create_income_code(self, data_dict):
+        """
+            Function to get Income Code Data from dictionary
+            and populate Income Table 
+        """
+
+        try:
+            print("try in GCID: ", type(data_dict))
+            income_code = data_dict['tables'].get('B19001').get('columns')
+            print('income_code: ', income_code)
+
+            for data in income_code:
+                income_id = data
+                income_name = income_code.get(income_id).get("name")
+
+                try:
+                    income_data = Income.objects.get(income_id=income_id)
+                    print('GCID-income_data: try get: \n', income_data)
+                except:
+                    incomedb_data = Income.objects.create(
+                        income_id=income_id,
+                        income_name=income_name
+                    )
+                    print('GCID-incomedb_data: except create \n', incomedb_data)
+
+        except Exception as e:
+            print("Error in GRD:", e)
+
+    def get(self, request):
+        try:
+            income_data = Income.objects.all()
+            if income_data.exists():
+                print("Inside if --")
+                income_serializer = IncomeSerializer(income_data, many=True)
+                return Response(income_serializer.data)
+            else:
+                print("inside else --")
+                return Response("No Data Available")
+        except Exception as e:
+            print("Error in ICD-GET: ", e)
+            return Response({'Error in ICD-G': f'{e}'})
+
+    def post(self, request):
+
+        try:
+            if request.data:
+                file_name = request.data.get('File_Name')
+                print('file_name: ', file_name)
+                data_dict = json_file_read(file_name)
+                print('data_dict:======= ', data_dict)
+
+                self.get_and_create_income_code(data_dict)
+
+                return Response(data_dict)
+
+        except Exception as e:
+            print("Error in ICD-POST: ", e)
+            return Response({'Error in ICD-P': f'{e}'})

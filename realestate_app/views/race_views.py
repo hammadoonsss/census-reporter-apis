@@ -79,26 +79,49 @@ class StateRaceEstimateData(APIView, CustomPagination):
             else:
                 return Response({'Error': "In valid request!!"})
         except Exception as e:
-            print("Error in RSD-GET:", e)
-            return Response({"In Exception": e})
+            print("Error in SRED:", e)
+            return Response({"In Error in SRED": f'{e}'})
 
 
 class RaceFilterData(APIView):
 
     def post(self, request):
-        
-        print('request.data: ', request.data)
 
-        perc_data = RaceEstimate.objects.annotate(percentage=F(
-            'race_estimate_value')*100/F('county__race_total')).filter(percentage__gt=70, race_id='B02001003')
-        print('perc_data:====> ', perc_data)
+        try:
+            print('request.data: ', request.data)
 
-        for data in perc_data:
-            print("data===", data.county_id,)
-            print("data.race_id+", data.race_id)
-            print(' data.race_estimate_value: ',  data.race_estimate_value)
-            print('data.county.race_total', data.county.race_total)
-            print(' data.percentage: ',  data.percentage)
-            print("--------------------")
+            race_id = request.data.get('Race_ID')
+            print('race_id: ', race_id)
+            percent = request.data.get('Percent')
+            print('percent: ', type(percent))
+
+            perc_data = RaceEstimate.objects.annotate(percentage=F(
+                'race_estimate_value')*100/F('county__race_total')).filter(percentage__gt=percent, race_id=race_id)
+            print('perc_data:====> ', perc_data)
             
-        return Response("Race_filter_data")
+            perc_list = []
+            for data in perc_data:
+                
+                print("data===", data.county_id,)
+                print("data.race_id+", data.race_id)
+                print(' data.race_estimate_value: ',  data.race_estimate_value)
+                print('data.county.race_total', data.county.race_total)
+                print(' data.percentage: ',  data.percentage)
+                print("--------------------")
+                
+                perc_data ={}
+                perc_data['State_id'] = data.county.state.state_id
+                perc_data['County_id'] = data.county_id
+                perc_data['Race_id'] = data.race_id
+                perc_data['Race_Total'] = data.county.race_total
+                perc_data['Race_Estimate_value'] = data.race_estimate_value
+                perc_data['Percentage'] = data.percentage
+
+                perc_list.append(perc_data)
+
+            return Response({'result': perc_list})
+
+        except Exception as e:
+            print("Error in RFD-Post: ", e)
+            return Response({'Error in RFD': f'{e}'})
+        
