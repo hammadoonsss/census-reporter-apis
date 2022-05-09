@@ -1,12 +1,13 @@
 
 from django.http import JsonResponse
-from django.db.models import Count, Min, Max, F, Q
+from django.db.models import Count, Min, Max, F, Q, Sum
 
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from realestate_app.models import County, Race, RaceError, RaceEstimate, State
+from realestate_app.models import (State, County, Race, RaceError, RaceEstimate,
+                                   RaceStateTotal, )
 
 from realestate_app.paginations import CustomPagination
 
@@ -17,7 +18,7 @@ from realestate_app.serializers import (
 # Main APIs - To Fetch Data.
 
 
-class StateRaceEstimateData(APIView, CustomPagination):
+class RaceEstimateStateData(APIView, CustomPagination):
 
     def post(self, request):
         try:
@@ -68,13 +69,13 @@ class StateRaceEstimateData(APIView, CustomPagination):
                 # return Response(race_serializer.data)
 
                 # Dictionary-county_race_list
-                return Response({'result': county_race_list})
+                # return Response({'result': county_race_list})
 
                 # Pagination -2
-                # result = self.paginate_queryset(county_race_list, request)
+                result = self.paginate_queryset(county_race_list, request)
                 # # race_serializer = RaceEstimateSerializer(result, many=True)
                 # print('result: ', result)
-                # return self.get_paginated_response(result)
+                return self.get_paginated_response(result)
 
             else:
                 return Response({'Error': "In valid request!!"})
@@ -98,18 +99,18 @@ class RaceFilterData(APIView):
             perc_data = RaceEstimate.objects.annotate(percentage=F(
                 'race_estimate_value')*100/F('county__race_total')).filter(percentage__gt=percent, race_id=race_id)
             print('perc_data:====> ', perc_data)
-            
+
             perc_list = []
             for data in perc_data:
-                
+
                 print("data===", data.county_id,)
                 print("data.race_id+", data.race_id)
                 print(' data.race_estimate_value: ',  data.race_estimate_value)
                 print('data.county.race_total', data.county.race_total)
                 print(' data.percentage: ',  data.percentage)
                 print("--------------------")
-                
-                perc_data ={}
+
+                perc_data = {}
                 perc_data['State_id'] = data.county.state.state_id
                 perc_data['County_id'] = data.county_id
                 perc_data['Race_id'] = data.race_id
@@ -124,4 +125,63 @@ class RaceFilterData(APIView):
         except Exception as e:
             print("Error in RFD-Post: ", e)
             return Response({'Error in RFD': f'{e}'})
-        
+
+
+class RaceStateTotalData(APIView):
+
+    def get(self, request):
+        try:
+            race_state = RaceStateTotal.objects.exclude(race='B02001001')
+            print('race_state: ', race_state)
+
+            
+
+
+
+            return Response({'msg': 'Check Terminal'})
+
+        except Exception as e:
+            print("Error in RSTD-GET: ", e)
+            return Response({'Error in RSTD-GET': f'{e}'})
+
+    def post(self, request):
+
+        try:
+            count = 0
+            state = State.objects.all()
+
+            for data in state:
+                race_id = Race.objects.all()
+
+                for id in race_id:
+                    print("race_id", id)
+                    print("State_id", data)
+
+                    race_total = RaceEstimate.objects.filter(
+                        county__state_id=data, race_id=id).aggregate(sum_race=Sum('race_estimate_value'))
+                    print("race_total", race_total)
+
+                    state_total = County.objects.filter(
+                        state_id=data).aggregate(sum_state=Sum('race_total'))
+                    print("state_total", state_total)
+
+                    count = count + 1
+                    print("count", count)
+
+                    try:
+                        rst_data = RaceStateTotal.objects.get(state=data, race=id)
+                        print('RST-rst_db_data: try get: \n', rst_data)
+                    except:
+                        rst_db_data = RaceStateTotal.objects.create(
+                            state=data,
+                            race=id,
+                            state_total=state_total['sum_state'],
+                            race_total=race_total['sum_race']
+                        )
+                        print('RST-rst_db_data: except create \n', rst_db_data)
+
+            return Response({'msg': 'Populated DB'})
+
+        except Exception as e:
+            print("Error in RST: ", e)
+            return Response({'Error in RST': f'{e}'})

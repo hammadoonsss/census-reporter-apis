@@ -11,7 +11,7 @@ from realestate_app.views.views import(IncomeCodeData, RaceStateData, RaceCodeDa
                                        StateCountyDetailData, TopicDetails, UpdateFTPFile)
 
 # Race Views
-from realestate_app.views.race_views import (StateRaceEstimateData,
+from realestate_app.views.race_views import (RaceStateTotalData, RaceEstimateStateData,
                                              RaceFilterData)
 
 urlpatterns = [
@@ -52,10 +52,12 @@ urlpatterns = [
          name='income_code_data'),
 
     # State Race Estimate Data
-    path("state/race_estimate/data", StateRaceEstimateData.as_view(),
-         name='state_race_estimate_data'),
+    path("race_estimate/state/data", RaceEstimateStateData.as_view(),
+         name='race_estimate_state_data'),
     # Race Filter Data
-    path('race/filter/data/', RaceFilterData.as_view(), name='race_filter_data'),
+    path('race/filter/data', RaceFilterData.as_view(), name='race_filter_data'),
+    # Race State Total
+    path('race/state/total/data', RaceStateTotalData.as_view(), name='race_state_total_data'),
 
 
 ]

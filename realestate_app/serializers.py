@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from realestate_app.models import (County, State,
+from realestate_app.models import (County, RaceStateTotal, State,
                                    Race, RaceError, RaceEstimate,
                                    Income,IncomeError, IncomeEstimate,)
 
@@ -58,3 +58,9 @@ class IncomeErrorSerializer(serializers.ModelSerializer):
     class Meta:
         model = IncomeError
         fields = ['income_error_value', 'county_id', 'income_id']
+
+class RaceStateTotalSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RaceStateTotal
+        fields = ['state_id', 'race_id', 'race_total', 'state_total']

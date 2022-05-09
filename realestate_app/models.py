@@ -112,3 +112,15 @@ class IncomeError(models.Model):
     class Meta:
         unique_together = ['income', 'county']
         verbose_name = 'Income_Error'
+
+
+class RaceStateTotal(models.Model):
+
+    state = models.ForeignKey('State', on_delete=models.CASCADE, related_name='state_idt', null=True)
+    state_total = models.FloatField(blank=True, null=True)
+    race = models.ForeignKey('Race', on_delete=models.CASCADE, related_name='race_idt', null=True)
+    race_total = models.FloatField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ['state', 'race']
+        verbose_name = 'Race_State_Total'
