@@ -84,7 +84,7 @@ class RaceEstimateStateData(APIView, CustomPagination):
             return Response({"In Error in SRED": f'{e}'})
 
 
-class RaceFilterData(APIView):
+class RaceTotalTopCountiesData(APIView):
 
     def post(self, request):
 
@@ -97,18 +97,12 @@ class RaceFilterData(APIView):
             print('percent: ', type(percent))
 
             perc_data = RaceEstimate.objects.annotate(percentage=F(
-                'race_estimate_value')*100/F('county__race_total')).filter(percentage__gt=percent, race_id=race_id)
-            print('perc_data:====> ', perc_data)
+                'race_estimate_value')*100/F('county__race_total')
+            ).filter(percentage__gt=percent, race_id=race_id)
+            print('perc_data:====> ', type(perc_data))
 
             perc_list = []
             for data in perc_data:
-
-                print("data===", data.county_id,)
-                print("data.race_id+", data.race_id)
-                print(' data.race_estimate_value: ',  data.race_estimate_value)
-                print('data.county.race_total', data.county.race_total)
-                print(' data.percentage: ',  data.percentage)
-                print("--------------------")
 
                 perc_data = {}
                 perc_data['State_id'] = data.county.state.state_id
@@ -128,21 +122,6 @@ class RaceFilterData(APIView):
 
 
 class RaceStateTotalData(APIView):
-
-    def get(self, request):
-        try:
-            race_state = RaceStateTotal.objects.exclude(race='B02001001')
-            print('race_state: ', race_state)
-
-            
-
-
-
-            return Response({'msg': 'Check Terminal'})
-
-        except Exception as e:
-            print("Error in RSTD-GET: ", e)
-            return Response({'Error in RSTD-GET': f'{e}'})
 
     def post(self, request):
 
@@ -169,7 +148,8 @@ class RaceStateTotalData(APIView):
                     print("count", count)
 
                     try:
-                        rst_data = RaceStateTotal.objects.get(state=data, race=id)
+                        rst_data = RaceStateTotal.objects.get(
+                            state=data, race=id)
                         print('RST-rst_db_data: try get: \n', rst_data)
                     except:
                         rst_db_data = RaceStateTotal.objects.create(
@@ -185,3 +165,42 @@ class RaceStateTotalData(APIView):
         except Exception as e:
             print("Error in RST: ", e)
             return Response({'Error in RST': f'{e}'})
+
+
+class RaceTotalTopStateData(APIView):
+
+    def post(self, request):
+
+        try:
+            race_id = request.data.get('Race_ID')
+            print('race_id: ', race_id)
+
+            race_state = RaceStateTotal.objects.exclude(race="B02001001").annotate(perc_state=(
+                F('race_total')*100)/F('state_total')).filter(race_id=race_id).order_by('-perc_state')[:5]
+
+            print('race_state: ', race_state)
+
+            race_top_state_list = []
+
+            if race_state.exists():
+                for data in race_state:
+
+                    state_perc_data = {}
+
+                    state_perc_data['State_id'] = data.state_id
+                    state_perc_data['State_name'] = data.state.state_name
+                    state_perc_data['State_Total'] = data.state_total
+                    state_perc_data['Race_id'] = data.race_id
+                    state_perc_data['Race_Total'] = data.race_total
+                    state_perc_data['Percentage'] = data.perc_state
+
+                    race_top_state_list.append(state_perc_data)
+
+                return Response({'result': race_top_state_list})
+
+            else:
+                return Response({'result': 'No Data Available!'})
+
+        except Exception as e:
+            print("Error in RSTD-GET: ", e)
+            return Response({'Error in RSTD-GET': f'{e}'})

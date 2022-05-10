@@ -12,12 +12,12 @@ from realestate_app.views.views import(IncomeCodeData, RaceStateData, RaceCodeDa
 
 # Race Views
 from realestate_app.views.race_views import (RaceStateTotalData, RaceEstimateStateData,
-                                             RaceFilterData)
+                                             RaceTotalTopCountiesData, RaceTotalTopStateData)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # Census Reporter
+    # Census_Reporter
     path("tabulation/data/", TabulationData.as_view(),
          name='tabulation_data'),
     path("all_counties/data/", AllCountiesData.as_view(),
@@ -29,35 +29,43 @@ urlpatterns = [
     path("single_topic/state_data/", SingleTopicStateData.as_view(),
          name='single_topic_state_data'),
 
-    # TopicDetails
+
+    # Topic_Details
     path('topic/details/', TopicDetails.as_view(), name='topic_details'),
-    # UpdateFTPFile
+    # Update_FTP_File
     path('update/ftp/', UpdateFTPFile.as_view(), name='update_ftp_file'),
+
 
     # Race
     path("race/state/data/", RaceStateData.as_view(),
          name='race_state_data'),
-    # Race Code
+    # Race_Code
     path("race_code/data/", RaceCodeData.as_view(),
          name='race_code_data'),
     # State/County
     path("state/county_detail/data/", StateCountyDetailData.as_view(),
          name='state_county_detail_data'),
-    # Race Error/Estimate
+    # Race_Error/Estimate
     path("race/error_estimate/data/", RaceErrorEstimateData.as_view(),
          name='race_error_estimate_data'),
-     
-     #Income Code
-     path("income_code/data/", IncomeCodeData.as_view(),
+
+
+    # Income_Code
+    path("income_code/data/", IncomeCodeData.as_view(),
          name='income_code_data'),
 
-    # State Race Estimate Data
+
+    # Race_Estimate_State_Data
     path("race_estimate/state/data", RaceEstimateStateData.as_view(),
          name='race_estimate_state_data'),
-    # Race Filter Data
-    path('race/filter/data', RaceFilterData.as_view(), name='race_filter_data'),
-    # Race State Total
-    path('race/state/total/data', RaceStateTotalData.as_view(), name='race_state_total_data'),
+    # Race_Total_Top_Counties_Data
+    path('race/total/top_counties/data', RaceTotalTopCountiesData.as_view(), name='race_total_top_counties_data'),
 
+    # Race_State_Total
+    path('race/state/total/data', RaceStateTotalData.as_view(),
+         name='race_state_total_data'),
+    # Race_Total_Top_State_Data
+    path('race/total/top_state/data', RaceTotalTopStateData.as_view(),
+         name='race_totaltop_state_data'),
 
 ]
