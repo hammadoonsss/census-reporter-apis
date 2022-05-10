@@ -712,6 +712,8 @@ class StateRaceEstimateData(APIView, CustomPagination):
                 # Dictionary-county_race_list
                 # return Response({'data': county_race_list})
 
+
+
                 # Pagination -2
                 result = self.paginate_queryset(county_race_list, request)
                 # race_serializer = RaceEstimateSerializer(result, many=True)
