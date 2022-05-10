@@ -79,6 +79,7 @@ class RaceEstimateStateData(APIView, CustomPagination):
 
             else:
                 return Response({'Error': "In valid request!!"})
+
         except Exception as e:
             print("Error in SRED:", e)
             return Response({"In Error in SRED": f'{e}'})
@@ -93,28 +94,33 @@ class RaceTotalTopCountiesData(APIView):
 
             race_id = request.data.get('Race_ID')
             print('race_id: ', race_id)
-            percent = request.data.get('Percent')
-            print('percent: ', type(percent))
 
-            perc_data = RaceEstimate.objects.annotate(percentage=F(
-                'race_estimate_value')*100/F('county__race_total')
-            ).filter(percentage__gt=percent, race_id=race_id)
-            print('perc_data:====> ', type(perc_data))
+            race_county = RaceEstimate.objects.exclude(race_id="B02001001").annotate(
+                percentage=F('race_estimate_value')*100/F('county__race_total')
+            ).filter(race_id=race_id).order_by("-percentage")[:5]
+
+            print('perc_data:====> ', type(race_county))
 
             perc_list = []
-            for data in perc_data:
 
-                perc_data = {}
-                perc_data['State_id'] = data.county.state.state_id
-                perc_data['County_id'] = data.county_id
-                perc_data['Race_id'] = data.race_id
-                perc_data['Race_Total'] = data.county.race_total
-                perc_data['Race_Estimate_value'] = data.race_estimate_value
-                perc_data['Percentage'] = data.percentage
+            if race_county.exists():
+                for data in race_county:
 
-                perc_list.append(perc_data)
+                    perc_data = {}
+                    perc_data['State_Id'] = data.county.state.state_id
+                    perc_data['State_Name'] = data.county.state.state_name
+                    perc_data['County_Id'] = data.county_id
+                    perc_data['County_Name'] = data.county.county_name
+                    perc_data['Race_Id'] = data.race_id
+                    perc_data['Race_Total'] = data.county.race_total
+                    perc_data['Race_Estimate_Value'] = data.race_estimate_value
+                    perc_data['Percentage'] = data.percentage
 
-            return Response({'result': perc_list})
+                    perc_list.append(perc_data)
+
+                return Response({'result': perc_list})
+            else:
+                return Response({'msg': "No Data Available"})
 
         except Exception as e:
             print("Error in RFD-Post: ", e)
@@ -137,15 +143,19 @@ class RaceStateTotalData(APIView):
                     print("State_id", data)
 
                     race_total = RaceEstimate.objects.filter(
-                        county__state_id=data, race_id=id).aggregate(sum_race=Sum('race_estimate_value'))
+                        county__state_id=data, race_id=id
+                    ).aggregate(sum_race=Sum('race_estimate_value'))
+
                     print("race_total", race_total)
 
                     state_total = County.objects.filter(
                         state_id=data).aggregate(sum_state=Sum('race_total'))
+
                     print("state_total", state_total)
 
                     count = count + 1
                     print("count", count)
+                    print("---------------------------------------------\n")
 
                     try:
                         rst_data = RaceStateTotal.objects.get(
@@ -175,8 +185,9 @@ class RaceTotalTopStateData(APIView):
             race_id = request.data.get('Race_ID')
             print('race_id: ', race_id)
 
-            race_state = RaceStateTotal.objects.exclude(race="B02001001").annotate(perc_state=(
-                F('race_total')*100)/F('state_total')).filter(race_id=race_id).order_by('-perc_state')[:5]
+            race_state = RaceStateTotal.objects.exclude(race="B02001001").annotate(
+                perc_state=(F('race_total')*100)/F('state_total')
+            ).filter(race_id=race_id).order_by('-perc_state')[:5]
 
             print('race_state: ', race_state)
 

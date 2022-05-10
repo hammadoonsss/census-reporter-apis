@@ -59,7 +59,8 @@ urlpatterns = [
     path("race_estimate/state/data", RaceEstimateStateData.as_view(),
          name='race_estimate_state_data'),
     # Race_Total_Top_Counties_Data
-    path('race/total/top_counties/data', RaceTotalTopCountiesData.as_view(), name='race_total_top_counties_data'),
+    path('race/total/top_counties/data', RaceTotalTopCountiesData.as_view(),
+         name='race_total_top_counties_data'),
 
     # Race_State_Total
     path('race/state/total/data', RaceStateTotalData.as_view(),

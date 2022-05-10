@@ -87,7 +87,6 @@ class Income(models.Model):
         return self.income_id
 
 
-
 class IncomeEstimate(models.Model):
 
     income_estimate_value = models.FloatField(blank=True, null=True)
@@ -116,9 +115,11 @@ class IncomeError(models.Model):
 
 class RaceStateTotal(models.Model):
 
-    state = models.ForeignKey('State', on_delete=models.CASCADE, related_name='state_idt', null=True)
+    state = models.ForeignKey(
+        'State', on_delete=models.CASCADE, related_name='state_idt', null=True)
     state_total = models.FloatField(blank=True, null=True)
-    race = models.ForeignKey('Race', on_delete=models.CASCADE, related_name='race_idt', null=True)
+    race = models.ForeignKey(
+        'Race', on_delete=models.CASCADE, related_name='race_idt', null=True)
     race_total = models.FloatField(blank=True, null=True)
 
     class Meta:
