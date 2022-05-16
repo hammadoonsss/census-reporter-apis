@@ -1,4 +1,6 @@
+from enum import unique
 from tabnanny import verbose
+from turtle import onclick
 from django.db import models
 
 # Create your models here.
@@ -39,6 +41,7 @@ class County(models.Model):
     state = models.ForeignKey(
         'State', on_delete=models.CASCADE, related_name='counties', null=True)
     race_total = models.FloatField(blank=True, null=True)
+    income_total = models.FloatField(blank=True, null=True)
 
     class Meta:
         verbose_name = 'County'
@@ -125,3 +128,16 @@ class RaceStateTotal(models.Model):
     class Meta:
         unique_together = ['state', 'race']
         verbose_name = 'Race_State_Total'
+
+class IncomeStateTotal(models.Model):
+
+    state = models.ForeignKey(
+        'State', on_delete=models.CASCADE, related_name='state_idti', null= True)
+    state_total = models.FloatField(blank=True, null= True)
+    income = models.ForeignKey(
+        'Income', on_delete= models.CASCADE, related_name='income_idti', null = True)
+    income_total = models.FloatField(blank= True, null= True)
+
+    class Meta:
+        unique_together = ['state', 'income']
+        verbose_name = 'Income_State_Total'

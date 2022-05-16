@@ -122,13 +122,13 @@ class SingleTopicStateData(APIView):
             multi_state = convert_list_string(state_code_list)
             data['geo_ids'] = multi_state
 
-            data_value = make_request("GET", "/1.0/data/show/latest", data)
+            # data_value = make_request("GET", "/1.0/data/show/latest", data)
             # print("data_value: --++---", data_value)
 
-            # response = requests.get(
-            #     f"{base_url}/data/show/latest?table_ids={multi_symbol}&geo_ids={multi_state}")
+            response = requests.get(
+                f"{base_url}/1.0/data/show/latest?table_ids={multi_symbol}&geo_ids={multi_state}")
 
-            # race_data = response.json()
+            data_value = response.json()
 
             return Response(data_value)
 

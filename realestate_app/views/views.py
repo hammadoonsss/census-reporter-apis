@@ -9,14 +9,14 @@ from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from realestate_app.models import (County, Income, Race, State,
+from realestate_app.models import (County, Income, IncomeError, Race, State,
                                    RaceError, RaceEstimate,)
 
 from realestate_app.paginations import CustomPagination
 
 from realestate_app.serializers import (CountySerializer,  StateSerializer,
                                         RaceSerializer, RaceEstimateSerializer,
-                                        IncomeSerializer, )
+                                        IncomeSerializer, IncomeEstimate)
 
 from realestate_app.utils import (convert_list_string, get_state_code,
                                   ftp_connect, get_file_ftp,  upload_file_ftp,
@@ -157,65 +157,65 @@ class RaceStateData(APIView):
             return Response({"Error in RSD-P":  f"{e}"})
 
 
-class RaceCodeData(APIView):
+# class RaceCodeData(APIView):
 
-    def get_and_create_race_data(self, data_dict):
-        """
-            Function to get Race Code Data from dictionary
-            and populate Race Table 
-        """
+#     def get_and_create_race_data(self, data_dict):
+#         """
+#             Function to get Race Code Data from dictionary
+#             and populate Race Table
+#         """
 
-        try:
-            print("try in GCRD: ", type(data_dict))
-            race_values = data_dict['tables'].get('B02001').get('columns')
-            print('values: ', race_values)
+#         try:
+#             print("try in GCRD: ", type(data_dict))
+#             race_values = data_dict['tables'].get('B02001').get('columns')
+#             print('values: ', race_values)
 
-            for data in race_values:
-                race_id = data
-                race_name = race_values.get(race_id).get("name")
+#             for data in race_values:
+#                 race_id = data
+#                 race_name = race_values.get(race_id).get("name")
 
-                try:
-                    race_data = Race.objects.get(race_id=race_id)
-                    print('GCRD-race_data: try get: \n', race_data)
-                except:
-                    racedb_data = Race.objects.create(
-                        race_id=race_id,
-                        race_name=race_name
-                    )
-                    print('GCRD-racedb_data: except create \n', racedb_data)
+#                 try:
+#                     race_data = Race.objects.get(race_id=race_id)
+#                     print('GCRD-race_data: try get: \n', race_data)
+#                 except:
+#                     racedb_data = Race.objects.create(
+#                         race_id=race_id,
+#                         race_name=race_name
+#                     )
+#                     print('GCRD-racedb_data: except create \n', racedb_data)
 
-        except Exception as e:
-            print("Error in GRD:", e)
+#         except Exception as e:
+#             print("Error in GRD:", e)
 
-    def get(self, request):
+#     def get(self, request):
 
-        try:
-            race_data = Race.objects.all()
-            if race_data.exists():
-                print("Inside if --")
-                race_serializer = RaceSerializer(race_data, many=True)
-                return Response(race_serializer.data)
-            else:
-                print("inside else --")
-                return Response("No Data Available")
+#         try:
+#             race_data = Race.objects.all()
+#             if race_data.exists():
+#                 print("Inside if --")
+#                 race_serializer = RaceSerializer(race_data, many=True)
+#                 return Response(race_serializer.data)
+#             else:
+#                 print("inside else --")
+#                 return Response("No Data Available")
 
-        except Exception as e:
-            print("Error in RCD-GET: ", e)
-            return Response({'Error in RCD-G': e})
+#         except Exception as e:
+#             print("Error in RCD-GET: ", e)
+#             return Response({'Error in RCD-G': e})
 
-    def post(self, request):
+#     def post(self, request):
 
-        try:
-            data_dict = read_json_file()
-            # print('data_dict:======= ', data_dict)
+#         try:
+#             data_dict = read_json_file()
+#             # print('data_dict:======= ', data_dict)
 
-            self.get_and_create_race_data(data_dict)
+#             self.get_and_create_race_data(data_dict)
 
-            return Response(data_dict)
+#             return Response(data_dict)
 
-        except Exception as e:
-            print("Error in RCD-POST: ", e)
-            return Response({'Error in RCD-P': e})
+#         except Exception as e:
+#             print("Error in RCD-POST: ", e)
+#             return Response({'Error in RCD-P': e})
 
 
 class StateCountyDetailData(APIView):
@@ -421,6 +421,7 @@ class RaceErrorEstimateData(APIView):
             return Response({'Error': f'{e}'})
 
 # ------------------------------------------------------------------
+# ---------------------Topic Details---------------------------------------
 
 
 class TopicDetails(APIView):
@@ -496,67 +497,160 @@ class UpdateFTPFile(APIView):
             return Response({'msg': f'{e}'})
 
 # ---------------------------------------------------------------------------
+# --------------------------Topic Code Data----------------------------------
 
-# Income Code Data
 
-
-class IncomeCodeData(APIView):
-
-    def get_and_create_income_code(self, data_dict):
-        """
-            Function to get Income Code Data from dictionary
-            and populate Income Table 
-        """
-
-        try:
-            print("try in GCID: ", type(data_dict))
-            income_code = data_dict['tables'].get('B19001').get('columns')
-            print('income_code: ', income_code)
-
-            for data in income_code:
-                income_id = data
-                income_name = income_code.get(income_id).get("name")
-
-                try:
-                    income_data = Income.objects.get(income_id=income_id)
-                    print('GCID-income_data: try get: \n', income_data)
-                except:
-                    incomedb_data = Income.objects.create(
-                        income_id=income_id,
-                        income_name=income_name
-                    )
-                    print('GCID-incomedb_data: except create \n', incomedb_data)
-
-        except Exception as e:
-            print("Error in GRD:", e)
-
-    def get(self, request):
-        try:
-            income_data = Income.objects.all()
-            if income_data.exists():
-                print("Inside if --")
-                income_serializer = IncomeSerializer(income_data, many=True)
-                return Response(income_serializer.data)
-            else:
-                print("inside else --")
-                return Response("No Data Available")
-        except Exception as e:
-            print("Error in ICD-GET: ", e)
-            return Response({'Error in ICD-G': f'{e}'})
+class TopicCodeData(APIView):
 
     def post(self, request):
 
         try:
             if request.data:
+
                 file_name = request.data.get('File_Name')
                 print('file_name: ', file_name)
-                data_dict = json_file_read(file_name)
-                print('data_dict:======= ', data_dict)
 
-                self.get_and_create_income_code(data_dict)
+                topic_id = request.data.get('Topic_ID')
+
+                data_dict = json_file_read(file_name)
+                print('data_dict:======= ', type(data_dict))
+
+                # self.get_and_create_income_code(data_dict, topic_id)
+                #  print("try in GCID: ", type(data_dict))
+
+                topic_code = data_dict['tables'].get(topic_id).get('columns')
+                print('topic_code: ', topic_code)
+
+                for data in topic_code:
+                    sub_topic_id = data
+                    sub_topic_name = topic_code.get(sub_topic_id).get("name")
+
+                    print("Sub_topic_id", sub_topic_id)
+                    print("Sub_topic_name", sub_topic_name)
+
+                    if topic_id == 'B19001':
+
+                        print("Inside Income")
+
+                        try:
+                            income_data = Income.objects.get(
+                                income_id=sub_topic_id)
+                            print('GCID-income_data: try get: \n', income_data)
+                        except:
+                            incomedb_data = Income.objects.create(
+                                income_id=sub_topic_id,
+                                income_name=sub_topic_name
+                            )
+                            print('GCID-incomedb_data: except create \n',
+                                  incomedb_data)
+
+                    elif topic_id == 'B02001':
+
+                        print('Inside Race')
+
+                        try:
+                            race_data = Race.objects.get(race_id=sub_topic_id)
+                            print('GCRD-race_data: try get: \n', race_data)
+                        except:
+                            racedb_data = Race.objects.create(
+                                race_id=sub_topic_id,
+                                race_name=sub_topic_name
+                            )
+                            print('GCRD-racedb_data: except create \n', racedb_data)
+
+                    else:
+                        return Response({'msg': 'NOT Valid Inputs'})
 
                 return Response(data_dict)
 
         except Exception as e:
             print("Error in ICD-POST: ", e)
             return Response({'Error in ICD-P': f'{e}'})
+
+#   ------------------------------------------------------------------------------------
+#   ------------------------------Income-----------------------------------------------
+
+
+class IncomeErrorEstimateData(APIView):
+
+    def post(self, request):
+
+        try:
+            file_name = request.data.get('File_Name')
+            print('file_name: ', file_name)
+            # topic_id = request.data.get('Topic_ID')
+            # print('topic_id: ', topic_id)
+
+            data_dict = json_file_read(file_name)
+            print('data_dict in TEED: ', type(data_dict))
+
+            # self.get_and_create_income_error_estimate(data_dict)
+
+            data_value = data_dict['data']
+            print('data_value: ', data_value)
+
+            county_data = County.objects.all()
+
+            for county in county_data:
+
+                if county.county_id in data_value:
+                    print('county.county_id: ', county.county_id)
+
+                    income_value = data_value.get(
+                        county.county_id).get("B19001")
+                    print('income_value: ', income_value)
+
+                    income_code = Income.objects.all()
+
+                    income_total = income_value.get(
+                        'estimate').get('B19001001')
+
+                    county_obj = County.objects.get(county_id=county.county_id)
+                    county_obj.income_total = income_total
+                    county_obj.save()
+
+                    for income in income_code:
+
+                        # For Income_Estimate
+                        income_estimate = income_value.get(
+                            'estimate').get(income.income_id)
+                        print('income_estimate: -->', income_estimate)
+
+                        try:
+                            income_estimate_detail = IncomeEstimate.objects.get(
+                                county_id=county.county_id, income_id=income.income_id)
+                            print('income_estimate_detail: In TRY=== ',
+                                  income_estimate_detail)
+                        except:
+                            income_estimate_detail = IncomeEstimate.objects.create(
+                                income_estimate_value=income_estimate,
+                                county_id=county.county_id,
+                                income_id=income.income_id
+                            )
+                            print('income_estimate_detail: In EXCEPT=== ',
+                                  income_estimate_detail)
+
+                        # For Income_Error
+                        income_error = income_value.get(
+                            'error').get(income.income_id)
+                        print('income_error: ==<', income_error)
+
+                        try:
+                            income_error_detail = IncomeError.objects.get(
+                                county_id=county.county_id, income_id=income.income_id)
+                            print('income_error_detail: In TRY---',
+                                  income_error_detail)
+                        except:
+                            income_error_detail = IncomeError.objects.create(
+                                income_error_value=income_error,
+                                county_id=county.county_id,
+                                income_id=income.income_id
+                            )
+                            print('income_error_detail: In EXCEPT--',
+                                  income_error_detail)
+
+            return Response(data_dict)
+
+        except Exception as e:
+            print("Error in REED-POST:", e)
+            return Response({'Error': f'{e}'})

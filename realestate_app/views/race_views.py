@@ -14,6 +14,8 @@ from realestate_app.paginations import CustomPagination
 from realestate_app.serializers import (
     CountySerializer, RaceEstimateSerializer, RaceSerializer, StateSerializer)
 
+from realestate_app.services import TotalPercentage
+
 
 # Main APIs - To Fetch Data.
 
@@ -78,11 +80,11 @@ class RaceEstimateStateData(APIView, CustomPagination):
                 return self.get_paginated_response(result)
 
             else:
-                return Response({'Error': "In valid request!!"})
+                return Response({'error': "In valid request!!"})
 
         except Exception as e:
-            print("Error in SRED:", e)
-            return Response({"In Error in SRED": f'{e}'})
+            print("Error in RESD:", e)
+            return Response({"In Error in RESD": f'{e}'})
 
 
 class RaceTotalTopCountiesData(APIView):
@@ -90,41 +92,59 @@ class RaceTotalTopCountiesData(APIView):
     def post(self, request):
 
         try:
-            print('request.data: ', request.data)
+            if request.data:
+                race_id = request.data.get('Race_ID')
+                # print('race_id: ', race_id)
+                count = request.data.get('Count')
+                # print('count: ', count)
+                filter_type = request.data.get('Type')
+                # print('filter_type: ', filter_type)
 
-            race_id = request.data.get('Race_ID')
-            print('race_id: ', race_id)
+                race_county = RaceEstimate.objects.exclude(race_id="B02001001").annotate(
+                    percentage=F('race_estimate_value') *
+                    100/F('county__race_total')
+                ).filter(race_id=race_id)
 
-            race_county = RaceEstimate.objects.exclude(race_id="B02001001").annotate(
-                percentage=F('race_estimate_value')*100/F('county__race_total')
-            ).filter(race_id=race_id).order_by("-percentage")[:5]
+                if filter_type == 'Top':
+                    race_county = race_county.order_by('-percentage')[:count]
+                    print('race_county_top: ', race_county)
 
-            print('perc_data:====> ', type(race_county))
+                elif filter_type == 'Bottom':
+                    race_county = race_county.order_by('percentage')[:count]
+                    print('race_county_bottom: ', race_county)
 
-            perc_list = []
+                else:
+                    return Response({'msg': 'Invalid Filter Type'})
 
-            if race_county.exists():
-                for data in race_county:
+                print('perc_data:====> ', type(race_county))
 
-                    perc_data = {}
-                    perc_data['State_Id'] = data.county.state.state_id
-                    perc_data['State_Name'] = data.county.state.state_name
-                    perc_data['County_Id'] = data.county_id
-                    perc_data['County_Name'] = data.county.county_name
-                    perc_data['Race_Id'] = data.race_id
-                    perc_data['Race_Total'] = data.county.race_total
-                    perc_data['Race_Estimate_Value'] = data.race_estimate_value
-                    perc_data['Percentage'] = data.percentage
+                perc_list = []
 
-                    perc_list.append(perc_data)
+                if race_county.exists():
+                    for data in race_county:
 
-                return Response({'result': perc_list})
+                        perc_data = {}
+                        perc_data['State_Id'] = data.county.state.state_id
+                        perc_data['State_Name'] = data.county.state.state_name
+                        perc_data['County_Id'] = data.county_id
+                        perc_data['County_Name'] = data.county.county_name
+                        perc_data['Race_Id'] = data.race_id
+                        perc_data['Race_Total'] = data.county.race_total
+                        perc_data['Race_Estimate_Value'] = data.race_estimate_value
+                        perc_data['Percentage'] = data.percentage
+
+                        perc_list.append(perc_data)
+
+                    return Response({'result': perc_list})
+                else:
+                    return Response({'result': "No Data Available"})
+
             else:
-                return Response({'msg': "No Data Available"})
+                return Response({'error': 'Invalid request'})
 
         except Exception as e:
-            print("Error in RFD-Post: ", e)
-            return Response({'Error in RFD': f'{e}'})
+            print("Error in RTTCD-POST: ", e)
+            return Response({'Error in RTTCD-POST': f'{e}'})
 
 
 class RaceStateTotalData(APIView):
@@ -173,8 +193,8 @@ class RaceStateTotalData(APIView):
             return Response({'msg': 'Populated DB'})
 
         except Exception as e:
-            print("Error in RST: ", e)
-            return Response({'Error in RST': f'{e}'})
+            print("Error in RSTD: ", e)
+            return Response({'Error in RSTD': f'{e}'})
 
 
 class RaceTotalTopStateData(APIView):
@@ -182,36 +202,274 @@ class RaceTotalTopStateData(APIView):
     def post(self, request):
 
         try:
-            race_id = request.data.get('Race_ID')
-            print('race_id: ', race_id)
+            if request.data:
+                race_id = request.data.get('Race_ID')
+                # print('race_id: ', race_id)
+                count = request.data.get('Count')
+                # print('count: ', count)
+                filter_type = request.data.get('Type')
+                # print('filter_type: ', filter_type)
 
-            race_state = RaceStateTotal.objects.exclude(race="B02001001").annotate(
-                perc_state=(F('race_total')*100)/F('state_total')
-            ).filter(race_id=race_id).order_by('-perc_state')[:5]
+                race_state = RaceStateTotal.objects.exclude(race="B02001001").annotate(
+                    percent=(F('race_total')*100)/F('state_total')
+                ).filter(race_id=race_id)
 
-            print('race_state: ', race_state)
+                if filter_type == "Top":
+                    race_state = race_state.order_by('-percent')[:count]
+                    # print('race_state_top: ', race_state)
 
-            race_top_state_list = []
+                elif filter_type == "Bottom":
+                    race_state = race_state.order_by('percent')[:count]
+                    # print('race_state_bottom: ', race_state)
 
-            if race_state.exists():
-                for data in race_state:
+                else:
+                    return Response({'msg': 'Invalid Filter Type'})
 
-                    state_perc_data = {}
+                race_top_state_list = []
 
-                    state_perc_data['State_id'] = data.state_id
-                    state_perc_data['State_name'] = data.state.state_name
-                    state_perc_data['State_Total'] = data.state_total
-                    state_perc_data['Race_id'] = data.race_id
-                    state_perc_data['Race_Total'] = data.race_total
-                    state_perc_data['Percentage'] = data.perc_state
+                if race_state.exists():
+                    for data in race_state:
 
-                    race_top_state_list.append(state_perc_data)
+                        state_perc_data = {}
 
-                return Response({'result': race_top_state_list})
+                        state_perc_data['State_id'] = data.state_id
+                        state_perc_data['State_name'] = data.state.state_name
+                        state_perc_data['State_Total'] = data.state_total
+                        state_perc_data['Race_id'] = data.race_id
+                        state_perc_data['Race_Total'] = data.race_total
+                        state_perc_data['Percentage'] = data.percent
+
+                        race_top_state_list.append(state_perc_data)
+
+                    return Response({'result': race_top_state_list})
+
+                else:
+                    return Response({'result': 'No Data Available!'})
 
             else:
-                return Response({'result': 'No Data Available!'})
+                return Response({'error': 'Invalid request'})
 
         except Exception as e:
-            print("Error in RSTD-GET: ", e)
-            return Response({'Error in RSTD-GET': f'{e}'})
+            print("Error in RTTSD-POST: ", e)
+            return Response({'Error in RTTSD-POST': f'{e}'})
+
+
+class RaceStateTopCountiesData(APIView):
+
+    def post(self, request):
+
+        try:
+            if request.data:
+                race_id = request.data.get('Race_ID')
+                # print('race_id: ', race_id)
+                state = request.data.get('State')
+                # print('state: ', state)
+                count = request.data.get('Count')
+                # print('count: ', count)
+                filter_type = request.data.get('Type')
+                # print('filter_type: ', filter_type)
+
+                state_id = State.objects.get(state_name=state)
+                print('state_id: ', state_id)
+
+                county_data = RaceEstimate.objects.exclude(race_id='B02001001').annotate(
+                    percent=F('race_estimate_value') *
+                    100/F('county__race_total')
+                ).filter(race_id=race_id, county__state_id=state_id)
+
+                print('county_data: ', vars(county_data[0]))
+
+                # return Response({'Check Terminal'})
+                if filter_type == "Top":
+                    county_data = county_data.order_by('-percent')[:count]
+                    # print('county_data_top: ', county_data)
+
+                elif filter_type == "Bottom":
+                    county_data = county_data.order_by('percent')[:count]
+                    # print('county_data_bottom: ', county_data)
+
+                else:
+                    return Response({'msg': 'Invalid Filter Type'})
+
+                race_state_top_counties_list = []
+
+                if county_data.exists():
+                    for data in county_data:
+
+                        sc_perc_data = {}
+
+                        sc_perc_data['State_Id'] = data.county.state.state_id
+                        sc_perc_data['State_Name'] = data.county.state.state_name
+                        sc_perc_data['County_Id'] = data.county_id
+                        sc_perc_data['County_Name'] = data.county.county_name
+                        sc_perc_data['Race_Id'] = data.race_id
+                        sc_perc_data['Race_Total'] = data.county.race_total
+                        sc_perc_data['Race_Estimate_Value'] = data.race_estimate_value
+                        sc_perc_data['Percentage'] = data.percent
+
+                        race_state_top_counties_list.append(sc_perc_data)
+
+                    return Response({'result': race_state_top_counties_list})
+
+                else:
+                    return Response({'result': 'No Data Available!'})
+
+            else:
+                return Response({'error': 'Invalid request'})
+
+        except Exception as e:
+            print("Error in RSTCD-POST: ", e)
+            return Response({'Error in RSTCD-POST': f'{e}'})
+
+
+# ---------------------------------------------------------------------------------------------------
+# -----------------------------Race Percentage API -Dyanamic- ---------------------------------------
+
+
+class RaceTotalTopStateDataTwo(APIView):
+
+    def post(self, request):
+
+        try:
+            if request.data:
+                race_id = request.data.get('Race_ID')
+                # print('race_id: ', race_id)
+                count = request.data.get('Count')
+                # print('count: ', count)
+                filter_type = request.data.get('Type')
+                # print('filter_type: ', filter_type)
+                topic = "race"
+
+                race_state = TotalPercentage.top_state_data(
+                    RaceStateTotal, topic, race_id, count, filter_type)
+                print('race_state: ', race_state)
+
+                race_top_state_list = []
+
+                if race_state.exists():
+                    for data in race_state:
+
+                        state_perc_data = {}
+
+                        state_perc_data['State_id'] = data.state_id
+                        state_perc_data['State_name'] = data.state.state_name
+                        state_perc_data['State_Total'] = data.state_total
+                        state_perc_data['Race_id'] = data.race_id
+                        state_perc_data['Race_Total'] = data.race_total
+                        state_perc_data['Percentage'] = data.percent
+
+                        race_top_state_list.append(state_perc_data)
+
+                    return Response({'result': race_top_state_list})
+
+                else:
+                    return Response({'result': 'No Data Available!'})
+
+            else:
+                return Response({'error': 'Invalid request'})
+
+        except Exception as e:
+            print("Error in RTTSD-POST: ", e)
+            return Response({'Error in RTTSD-POST': f'{e}'})
+
+
+class RaceTotalTopCountiesDataTwo(APIView):
+
+    def post(self, request):
+
+        try:
+            if request.data:
+                race_id = request.data.get('Race_ID')
+                # print('race_id: ', race_id)
+                count = request.data.get('Count')
+                # print('count: ', count)
+                filter_type = request.data.get('Type')
+                # print('filter_type: ', filter_type)
+                topic = "race"
+
+                race_county = TotalPercentage.top_counties_data(
+                    RaceEstimate, topic, race_id, count, filter_type)
+
+                print('perc_data:====> ', type(race_county))
+
+                perc_list = []
+
+                if race_county.exists():
+                    for data in race_county:
+
+                        perc_data = {}
+                        perc_data['State_Id'] = data.county.state.state_id
+                        perc_data['State_Name'] = data.county.state.state_name
+                        perc_data['County_Id'] = data.county_id
+                        perc_data['County_Name'] = data.county.county_name
+                        perc_data['Race_Id'] = data.race_id
+                        perc_data['Race_Total'] = data.county.race_total
+                        perc_data['Race_Estimate_Value'] = data.race_estimate_value
+                        perc_data['Percentage'] = data.percent
+
+                        perc_list.append(perc_data)
+
+                    return Response({'result': perc_list})
+                else:
+                    return Response({'result': "No Data Available"})
+
+            else:
+                return Response({'error': 'Invalid request'})
+
+        except Exception as e:
+            print("Error in RTTCD-POST: ", e)
+            return Response({'Error in RTTCD-POST': f'{e}'})
+
+
+class RaceStateTopCountiesDataTwo(APIView):
+
+    def post(self, request):
+
+        try:
+            if request.data:
+                race_id = request.data.get('Race_ID')
+                # print('race_id: ', race_id)
+                state = request.data.get('State')
+                # print('state: ', state)
+                count = request.data.get('Count')
+                # print('count: ', count)
+                filter_type = request.data.get('Type')
+                # print('filter_type: ', filter_type)
+
+                state = State.objects.get(state_name=state)
+                # print('state_id: ', state_id)
+
+                topic = "race"
+
+                county_data = TotalPercentage.state_top_counties_data(
+                    RaceEstimate, topic, race_id, state, count, filter_type)
+
+                race_state_top_counties_list = []
+
+                if county_data.exists():
+                    for data in county_data:
+
+                        sc_perc_data = {}
+
+                        sc_perc_data['State_Id'] = data.county.state.state_id
+                        sc_perc_data['State_Name'] = data.county.state.state_name
+                        sc_perc_data['County_Id'] = data.county_id
+                        sc_perc_data['County_Name'] = data.county.county_name
+                        sc_perc_data['Race_Id'] = data.race_id
+                        sc_perc_data['Race_Total'] = data.county.race_total
+                        sc_perc_data['Race_Estimate_Value'] = data.race_estimate_value
+                        sc_perc_data['Percentage'] = data.percent
+
+                        race_state_top_counties_list.append(sc_perc_data)
+
+                    return Response({'result': race_state_top_counties_list})
+
+                else:
+                    return Response({'result': 'No Data Available!'})
+
+            else:
+                return Response({'error': 'Invalid request'})
+
+        except Exception as e:
+            print("Error in RSTCD-POST: ", e)
+            return Response({'Error in RSTCD-POST': f'{e}'})
