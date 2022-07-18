@@ -48,6 +48,13 @@ INSTALLED_APPS = [
     'corsheaders',
     'realestate_app.apps.RealestateAppConfig',
     'user.apps.UserConfig',
+    'realestate_education.apps.RealestateEducationConfig',
+    'realestate_poverty.apps.RealestatePovertyConfig',
+    'realestate_sex_age.apps.RealestateSexAgeConfig',
+    'realestate_house_price.apps.RealestateHousePriceConfig',
+    'realestate_occupancy.apps.RealestateOccupancyConfig',
+    'realestate_mobility.apps.RealestateMobilityConfig',
+    'realestate_tenure.apps.RealestateTenureConfig',
 ]
 
 # Only Development (NOT Recommended in Production)

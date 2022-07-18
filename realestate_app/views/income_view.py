@@ -10,6 +10,10 @@ from realestate_app.models import (State, County, Income, IncomeError, IncomeEst
 from realestate_app.services import TotalPercentage
 
 
+#   ------------------------------------------------------------------------------------
+#   ------------ Populate Income_State_Total Data in the Respective Tables -------------
+
+
 class IncomeStateTotalData(APIView):
 
     def post(self, request):
@@ -22,45 +26,55 @@ class IncomeStateTotalData(APIView):
                 income_id = Income.objects.all()
 
                 for id in income_id:
-                    print("income_id", id)
-                    print("State_id", data)
+                    # print("income_id", id)
+                    # print("State_id", data)
 
                     income_total = IncomeEstimate.objects.filter(
                         county__state_id=data, income_id=id
                     ).aggregate(sum_income=Sum('income_estimate_value'))
 
-                    print("income_total", income_total)
+                    # print("income_total", income_total)
 
                     state_total = County.objects.filter(
                         state_id=data).aggregate(sum_state=Sum('income_total'))
 
-                    print("state_total", state_total)
+                    # print("state_total", state_total)
 
                     count = count + 1
-                    print("count", count)
-                    print("---------------------------------------------\n")
+                    print('count:------------------- ', count)
 
-                    try:
-                        ist_data = IncomeStateTotal.objects.get(
-                            state=data, income=id)
-                        print('IST-ist_db_data: try get: \n', ist_data)
-                    except:
-                        ist_db_data = IncomeStateTotal.objects.create(
-                            state=data,
-                            income=id,
-                            state_total=state_total['sum_state'],
-                            income_total=income_total['sum_income']
-                        )
-                        print('IST-ist_db_data: except create \n', ist_db_data)
+                    if income_total['sum_income'] and state_total['sum_state']:
+                        print("In If --------->")
+                        print('income_total: ', income_total['sum_income'])
+                        print('state_total: ', state_total['sum_state'])
 
-            return Response({'msg': 'Populated DB'})
+                        try:
+                            ist_data = IncomeStateTotal.objects.get(
+                                state=data, income=id)
+                            print('IST-ist_db_data: try get: \n', ist_data)
+
+                        except:
+                            ist_db_data = IncomeStateTotal.objects.create(
+                                state=data,
+                                income=id,
+                                state_total=state_total['sum_state'],
+                                income_total=income_total['sum_income']
+                            )
+                            print('IST-ist_db_data: except create \n', ist_db_data)
+
+                    else:
+                        print("In ELSE::_____")
+                        print('income_total: ', income_total['sum_income'])
+                        print('state_total: ', state_total['sum_state'])
+
+            return Response({'msg': 'IncomeStateTotal DB Populated.'})
 
         except Exception as e:
-            print("Error in ISTD: ", e)
-            return Response({'Error in ISTD': f'{e}'})
+            return Response({'error in ISTD': f'{e}'})
 
-# ---------------------------------------------------------------------------------------------------
-# ---------------------Income Percentage Top State/Counties API -Dyanamic- ----------------------------
+
+#   ------------------------------------------------------------------------------
+#   --------------------- Get Top_State Data of Income  --------------------------
 
 
 class IncomeTotalTopStateData(APIView):
@@ -77,10 +91,15 @@ class IncomeTotalTopStateData(APIView):
                 # print('filter_type: ', filter_type)
                 topic = "income"
 
-                income_state = TotalPercentage.top_state_data(
+                income_state, error = TotalPercentage.top_state_data(
                     IncomeStateTotal, topic, income_id, count, filter_type)
 
-                print('income_state: ', income_state)
+                # print('errorin Post method : ', error)
+                # print('income_state: ', income_state)
+
+                if error is not None:
+                    print("Inside error----")
+                    return Response({'error': error})
 
                 income_top_state_list = []
 
@@ -101,14 +120,17 @@ class IncomeTotalTopStateData(APIView):
                     return Response({'result': income_top_state_list})
 
                 else:
-                    return Response({'result': 'No Data Available!'})
+                    return Response({'error': 'No Data Available!'})
 
             else:
                 return Response({'error': 'Invalid request'})
 
         except Exception as e:
-            print("Error in ITTSD-POST: ", e)
-            return Response({'Error in ITTSD-POST': f'{e}'})
+            return Response({'error in ITTSD': f'{e}'})
+
+
+#   ---------------------------------------------------------------------------------------
+#   ---------------------- Get Top_Counties Data of Income --------------------------------
 
 
 class IncomeTotalTopCountiesData(APIView):
@@ -125,10 +147,15 @@ class IncomeTotalTopCountiesData(APIView):
                 # print('filter_type: ', filter_type)
                 topic = "income"
 
-                income_county = TotalPercentage.top_counties_data(
+                income_county, error = TotalPercentage.top_counties_data(
                     IncomeEstimate, topic, income_id, count, filter_type)
 
-                print('income_county: ', income_county)
+                # print('error:==> ', error)
+                # print('income_county: ', income_county)
+
+                if error is not None:
+                    print("Inside error---->")
+                    return Response({'error': error})
 
                 income_top_county_list = []
 
@@ -149,14 +176,17 @@ class IncomeTotalTopCountiesData(APIView):
 
                     return Response({'result': income_top_county_list})
                 else:
-                    return Response({'result': "No Data Available"})
+                    return Response({'error': "No Data Available"})
 
             else:
                 return Response({'error': 'Invalid request'})
 
         except Exception as e:
-            print("Error in RTTCD-POST: ", e)
-            return Response({'Error in RTTCD-POST': f'{e}'})
+            return Response({'error in ITTCD:': f'{e}'})
+
+
+#   ----------------------------------------------------------------------------
+#   ---------------- Get State_Top_Counties Data of Income ---------------------
 
 
 class IncomeStateTopCountiesData(APIView):
@@ -166,7 +196,7 @@ class IncomeStateTopCountiesData(APIView):
         try:
             if request.data:
                 income_id = request.data.get('Income_ID')
-                # print('race_id: ', race_id)
+                # print('income_id: ', income_id)
                 state = request.data.get('State')
                 # print('state: ', state)
                 count = request.data.get('Count')
@@ -174,13 +204,20 @@ class IncomeStateTopCountiesData(APIView):
                 filter_type = request.data.get('Type')
                 # print('filter_type: ', filter_type)
 
-                state = State.objects.get(state_name=state)
+                state_id = State.objects.get(state_name=state)
                 # print('state_id: ', state_id)
 
                 topic = "income"
 
-                scounty_data = TotalPercentage.state_top_counties_data(
-                    IncomeEstimate, topic, income_id, state, count, filter_type)
+                scounty_data, error = TotalPercentage.state_top_counties_data(
+                    IncomeEstimate, topic, income_id, state_id, count, filter_type)
+
+                # print('error: ', error)
+                # print('scounty_data: ', scounty_data)
+
+                if error is not None:
+                    print("Inside error---->")
+                    return Response({'error': error})
 
                 income_state_top_counties_list = []
 
@@ -203,11 +240,10 @@ class IncomeStateTopCountiesData(APIView):
                     return Response({'result': income_state_top_counties_list})
 
                 else:
-                    return Response({'result': 'No Data Available!'})
+                    return Response({'error': 'No Data Available!'})
 
             else:
                 return Response({'error': 'Invalid request'})
 
         except Exception as e:
-            print("Error in RSTCD-POST: ", e)
-            return Response({'Error in RSTCD-POST': f'{e}'})
+            return Response({'error in ISTCD: ': f'{e}'})

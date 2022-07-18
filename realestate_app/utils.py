@@ -71,7 +71,7 @@ def get_state_code(state):
                 return None
         return state_list
     except Exception as e:
-        print("Error as in GSD")
+        print("Error as in GSD", e)
 
 
 def json_file_write(data, name):
@@ -128,19 +128,44 @@ def get_file_ftp(name):
 
 
 def json_file_read(name):
+    """
+        Funtion to Read JSON file and return Data Dictionary
+    """
 
     try:
         file_path = f"{base_path}/static/download/{name}"
 
         with open(file_path, "r") as f:
             data = f.read()
-            print('data in RJF:', type(data))
+            print('data in JFR:', type(data))
             f.close()
 
         data_dict = json.loads(data)
-        print('data_dict in RJF:', type(data_dict))
+        print('data_dict in JFR:', type(data_dict))
 
         return data_dict
 
     except Exception as e:
         print("Error in RJF: ", e)
+
+
+def check_similar_value(test_dict):
+    """
+        Funtion to Check Similar Values in Dictionary
+    """
+
+    try:
+        res = True
+
+        test_val = list(test_dict.values())[0]
+        print(test_val)
+
+        for ele in test_dict:
+            if test_dict[ele] != test_val:
+                res = False
+                break
+
+        return res
+
+    except Exception as e:
+        print("Error in CSV: ", e)
